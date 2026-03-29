@@ -134,6 +134,9 @@ body{background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line
 .series-type-label.main-ip{background:#0c1e14;color:#4aaf78;border:0.5px solid #183325}
 .series-type-label.spon-series{background:var(--bluebg);color:var(--blue);border:0.5px solid var(--blueborder)}
 .ep-body{display:none;padding:10px 12px 12px;border-top:0.5px solid var(--border);background:var(--bg2)}
+.ep-phase{margin-bottom:10px}
+.ep-phase:last-child{margin-bottom:0}
+.ep-phase-lbl{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px;padding:3px 0;border-bottom:0.5px solid var(--border)}
 .ep-sec-lbl{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
 .ep-ms{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
 .ep-tasks{display:flex;flex-direction:column;gap:3px}
@@ -491,9 +494,11 @@ function singleHTML(p){
 function renderSeries(){
   const el=document.getElementById('cards-series');
   const list=projects.filter(p=>p.kind==='series'&&!p.done).sort((a,b)=>{
-    const aD=a.episodes?.filter(e=>!e.done).map(e=>e.airDate).filter(Boolean).sort()[0]||a.airDate||'9999';
-    const bD=b.episodes?.filter(e=>!e.done).map(e=>e.airDate).filter(Boolean).sort()[0]||b.airDate||'9999';
-    return aD>bD?1:-1;
+    const nearestAir=p=>{
+      const epDates=(p.episodes||[]).filter(e=>!e.done).map(e=>e.airDate).filter(Boolean).sort();
+      return epDates[0]||p.airDate||'9999';
+    };
+    return nearestAir(a)<nearestAir(b)?-1:nearestAir(a)>nearestAir(b)?1:0;
   });
   if(!list.length){el.innerHTML='<div class="empty">Không có series nào đang chạy</div>';return;}
   el.innerHTML=list.map(seriesHTML).join('');
@@ -536,11 +541,9 @@ function seriesHTML(p){
         <span class="ep-arr" id="ep-arr-${p.id}-${e.id}">▶</span>
       </div>
       <div class="ep-body" id="ep-body-${p.id}-${e.id}">
-        ${epMsH?`<div class="ep-sec-lbl">Milestones</div><div class="ep-ms">${epMsH}</div>`:''}
-        ${epTkH?`<div class="ep-sec-lbl" style="margin-top:${epMsH?'6px':'0'}">Tasks</div><div class="ep-tasks">${epTkH}</div>`:''}
-        ${!epMsH&&!epTkH?'<div style="font-size:12px;color:var(--text3)">Chưa có data — sửa dự án để thêm</div>':''}
-      </div>
-    </div>`;
+        ${renderEpPhases(e,p)}
+        ${epTkH?'<div class="ep-phase"><div class="ep-phase-lbl tasks-lbl">Tasks PM</div><div class="ep-tasks">'+epTkH+'</div></div>':''}
+      </div>    </div>`;
   }).join('');
   return `<div class="card" id="card-${p.id}">
     <div class="card-hd">
