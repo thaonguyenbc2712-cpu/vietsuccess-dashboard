@@ -126,6 +126,13 @@ body{background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line
 .ep-done-btn.ep-done-active:hover{background:var(--redbg);color:var(--red);border-color:var(--redborder)}
 .ep-arr{font-size:9px;color:var(--text3);flex-shrink:0;transition:transform .18s}
 .ep-arr.open{transform:rotate(90deg)}
+.ep-type{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:600;flex-shrink:0;letter-spacing:.02em}
+.ep-type.spon{background:var(--bluebg);color:var(--blue);border:0.5px solid var(--blueborder)}
+.ep-type.org{background:#0c1e14;color:#4aaf78;border:0.5px solid #183325}
+.ep-row.ep-spon{border-left:2px solid var(--blue)}
+.series-type-label{font-size:10px;padding:2px 8px;border-radius:3px;font-weight:600}
+.series-type-label.main-ip{background:#0c1e14;color:#4aaf78;border:0.5px solid #183325}
+.series-type-label.spon-series{background:var(--bluebg);color:var(--blue);border:0.5px solid var(--blueborder)}
 .ep-body{display:none;padding:10px 12px 12px;border-top:0.5px solid var(--border);background:var(--bg2)}
 .ep-sec-lbl{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
 .ep-ms{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
@@ -445,7 +452,7 @@ function renderAll(){
 function renderSingle(){
   const el=document.getElementById('cards-single');
   const list=projects.filter(p=>p.kind==='single'&&!p.done);
-  if(!list.length){el.innerHTML='<div class="empty">Không có tập lẻ nào đang chạy</div>';return;}
+  if(!list.length){el.innerHTML='<div class="empty">Không có tập lẻ nào<br><span style="font-size:11px">Dùng cho tập special ngoài lịch series</span></div>';return;}
   el.innerHTML=list.map(singleHTML).join('');
 }
 function singleHTML(p){
@@ -511,9 +518,12 @@ function seriesHTML(p){
         <span class="ep-task-due${!t.done&&t.due&&D(t.due)<=0?' urgent':''}">${F(t.due)}</span>
       </div>`).join('');
     const guestLabel=e.guest&&e.guest!=='TBD'?e.guest:'TBD';
-    return `<div class="ep-row ${e.done?'ep-done':''}" id="ep-${p.id}-${e.id}">
+    const isEpSpon=e.type==='sponsor'||p.type==='sponsor';
+    const epTypeBadge=isEpSpon?'<span class="ep-type spon">Sponsored</span>':'<span class="ep-type org">Organic</span>';
+    return `<div class="ep-row ${e.done?'ep-done':''} ${isEpSpon?'ep-spon':''}" id="ep-${p.id}-${e.id}">
       <div class="ep-hd" onclick="toggleEp('${p.id}','${e.id}')">
         <span class="ep-num">Tập ${e.ep}</span>
+        ${epTypeBadge}
         <span class="ep-title">${esc(guestLabel)}</span>
         ${e.shootDate?`<span class="ep-meta">Quay ${F(e.shootDate)}</span>`:''}
         <span class="ep-air-tag ${ecls}">Air ${F(e.airDate)}</span>
@@ -531,8 +541,8 @@ function seriesHTML(p){
   return `<div class="card" id="card-${p.id}">
     <div class="card-hd">
       <div class="card-main">
-        <div class="card-title"><span class="badge series-b">Series</span> ${esc(p.name)}</div>
-        <div class="badges">${lb}${bb}</div>
+        <div class="card-title">${p.type==='sponsor'?'<span class="badge sponsor">Sponsored Series</span>':'<span class="badge series-b">Main IP</span>'} ${esc(p.name)}</div>
+        <div class="badges">${lb}${bb}${(()=>{const sponEps=eps.filter(e=>e.type==='sponsor').length;const orgEps=eps.filter(e=>e.type==='organic').length;return sponEps>0&&orgEps>0?`<span class="badge lang">${sponEps} sponsored · ${orgEps} organic</span>`:''})()}</div>
         <div class="card-meta">Host: ${esc(p.host||'—')} · ${doneEps}/${eps.length} tập hoàn thành</div>
         ${p.note?`<div class="card-note">${esc(p.note)}</div>`:''}
       </div>
@@ -547,7 +557,10 @@ function seriesHTML(p){
     ${flH?`<div class="divider"></div><div class="card-sec"><div class="flags">${flH}</div></div>`:''}
     <div class="divider"></div>
     <div class="series-eps" style="padding-top:10px">
-      <div class="sec-lbl" style="padding:0 0 8px">Tiến độ từng tập</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0 0 8px">
+        <div class="sec-lbl">Tiến độ từng tập</div>
+        <div style="display:flex;gap:5px">${(()=>{const sp=eps.filter(e=>e.type==='sponsor').length;const og=eps.filter(e=>e.type==='organic').length;let r='';if(sp>0)r+=`<span class="ep-type spon">${sp} Sponsored</span>`;if(og>0)r+=`<span class="ep-type org">${og} Organic</span>`;return r;})()}</div>
+      </div>
       ${epsH||'<div style="font-size:12px;color:var(--text3);padding-bottom:8px">Chưa có tập nào</div>'}
     </div>
     ${tot?`<div class="divider"></div><button class="cl-toggle" onclick="toggleCl('r${p.id}')"><span>Checklist series — ${tn}/${tot}</span><div class="cl-prog"><div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div><span id="arr-r${p.id}" style="font-size:9px">▶</span></div></button>
