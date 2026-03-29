@@ -3,205 +3,202 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vietsuccess — Project Dashboard</title>
+<title>Vietsuccess — Dashboard</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#0d0d0d;--bg2:#161616;--bg3:#1e1e1e;--bg4:#252525;
-  --border:#2a2a2a;--border2:#333;
-  --text:#f0f0f0;--text2:#999;--text3:#555;
-  --red:#e85555;--redbg:#1e1010;--redborder:#3a1a1a;
-  --yellow:#d4a03a;--yellowbg:#1e1a0e;--yellowborder:#332a10;
-  --green:#4caf7d;--greenbg:#0e1e15;--greenborder:#1a3325;
-  --blue:#4a9edd;--bluebg:#0e1520;--blueborder:#1a2a3a;
-  --purple:#9b7fe8;--purplebg:#160e2a;
-  --accent:#e85555;
-  --radius:10px;--radius-sm:6px;
+  --border:#2a2a2a;--border2:#363636;
+  --text:#f0f0f0;--text2:#888;--text3:#444;
+  --red:#e05555;--redbg:#1c0f0f;--redborder:#3a1818;
+  --yellow:#c99a35;--yellowbg:#1a1608;--yellowborder:#2e2510;
+  --green:#4aaf78;--greenbg:#0c1a12;--greenborder:#183325;
+  --blue:#4a9edd;--bluebg:#0c1520;--blueborder:#182a3a;
+  --accent:#e05555;
+  --r:10px;--rs:6px;
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 }
 body{background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
-
-/* Layout */
-.app{max-width:900px;margin:0 auto;padding:24px 20px 60px}
-.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+.app{max-width:960px;margin:0 auto;padding:20px 16px 80px}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
 .logo{display:flex;align-items:center;gap:10px}
-.logo-v{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;flex-shrink:0}
-.logo-name{font-size:15px;font-weight:600;color:var(--text)}
+.logo-v{width:30px;height:30px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;flex-shrink:0}
+.logo-name{font-size:15px;font-weight:600}
 .logo-sub{font-size:11px;color:var(--text2);margin-top:1px}
-.today{text-align:right;font-size:12px;color:var(--text2)}
-.today strong{color:var(--text);font-weight:500;display:block;font-size:13px}
-
-/* Metrics */
-.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:24px}
-.metric{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px}
-.metric-label{font-size:11px;color:var(--text2);margin-bottom:6px}
-.metric-value{font-size:24px;font-weight:600;line-height:1}
-.metric-value.red{color:var(--red)}
-.metric-value.yellow{color:var(--yellow)}
-.metric-value.green{color:var(--green)}
-
-/* Tabs */
-.tabs{display:flex;gap:2px;margin-bottom:20px;background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:3px;width:fit-content}
-.tab{padding:6px 16px;border-radius:4px;font-size:13px;cursor:pointer;color:var(--text2);border:none;background:none;transition:all .15s}
-.tab.active{background:var(--bg4);color:var(--text);font-weight:500}
-
-/* Cards */
-.cards{display:flex;flex-direction:column;gap:14px}
-.card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .2s}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.today-info{text-align:right;margin-right:4px}
+.today-date{font-size:13px;font-weight:500;color:var(--text)}
+.today-sub{font-size:11px;color:var(--text2)}
+.icon-btn{background:none;border:0.5px solid var(--border2);border-radius:var(--rs);color:var(--text2);cursor:pointer;padding:6px 11px;font-size:12px;transition:all .15s;white-space:nowrap}
+.icon-btn:hover{background:var(--bg3);color:var(--text)}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:18px}
+.metric{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--rs);padding:12px 14px}
+.metric-lbl{font-size:11px;color:var(--text2);margin-bottom:5px}
+.metric-val{font-size:22px;font-weight:600;line-height:1}
+.metric-val.red{color:var(--red)}
+.metric-val.yellow{color:var(--yellow)}
+.metric-val.green{color:var(--green)}
+.main-tabs{display:flex;gap:2px;margin-bottom:16px;background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--rs);padding:3px;width:fit-content}
+.main-tab{padding:6px 16px;border-radius:4px;font-size:13px;cursor:pointer;color:var(--text2);border:none;background:none;transition:all .15s;position:relative}
+.main-tab.active{background:var(--bg4);color:var(--text);font-weight:500}
+.tab-badge{display:inline-block;font-size:9px;background:var(--accent);color:#fff;border-radius:8px;padding:1px 5px;margin-left:4px;min-width:16px;text-align:center;vertical-align:middle}
+.tab-badge.gray{background:var(--text3)}
+.view{display:none}.view.active{display:block}
+.cards{display:flex;flex-direction:column;gap:11px}
+.card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .2s}
 .card:hover{border-color:var(--border2)}
-.card-header{padding:16px 18px 12px;display:flex;align-items:flex-start;gap:12px}
+.card.archived{opacity:.4;border-style:dashed}
+.card-hd{display:flex;align-items:flex-start;gap:12px;padding:14px 16px 12px}
 .card-main{flex:1;min-width:0}
-.card-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px}
-.badges{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
-.badge{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600;letter-spacing:.02em}
-.badge.organic{background:#0e2218;color:#4caf7d;border:0.5px solid #1a3325}
+.card-title{font-size:15px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.title-strike{text-decoration:line-through;color:var(--text2)}
+.badges{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px}
+.badge{font-size:10px;padding:2px 7px;border-radius:3px;font-weight:600}
+.badge.organic{background:#0c1e14;color:#4aaf78;border:0.5px solid #183325}
 .badge.sponsor{background:var(--bluebg);color:var(--blue);border:0.5px solid var(--blueborder)}
-.badge.series{background:var(--yellowbg);color:var(--yellow);border:0.5px solid var(--yellowborder)}
-.badge.viet{background:var(--bg3);color:var(--text2);border:0.5px solid var(--border)}
+.badge.series-b{background:var(--yellowbg);color:var(--yellow);border:0.5px solid var(--yellowborder)}
+.badge.lang{background:var(--bg3);color:var(--text2);border:0.5px solid var(--border)}
+.badge.done-b{background:var(--greenbg);color:var(--green);border:0.5px solid var(--greenborder)}
 .card-meta{font-size:12px;color:var(--text2)}
-.card-countdown{text-align:right;flex-shrink:0}
-.countdown-num{font-size:30px;font-weight:700;line-height:1;letter-spacing:-1px}
-.countdown-num.red{color:var(--red)}
-.countdown-num.yellow{color:var(--yellow)}
-.countdown-num.green{color:var(--green)}
-.countdown-label{font-size:10px;color:var(--text2);margin-top:2px}
-.air-date{font-size:11px;color:var(--text3);margin-top:3px}
-
-/* Card sections */
-.card-divider{height:0.5px;background:var(--border);margin:0 18px}
-.card-section{padding:12px 18px}
-.section-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
-
-/* Milestones */
-.milestones{display:flex;flex-direction:column;gap:7px}
-.ms{display:flex;align-items:center;gap:10px}
-.ms-date{font-size:11px;color:var(--text2);min-width:58px;font-variant-numeric:tabular-nums}
+.card-note{font-size:11px;color:var(--text3);margin-top:3px}
+.card-right{display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex-shrink:0}
+.cd-num{font-size:28px;font-weight:700;line-height:1;letter-spacing:-1px;text-align:right}
+.cd-num.red{color:var(--red)}.cd-num.yellow{color:var(--yellow)}.cd-num.green{color:var(--green)}.cd-num.gray{color:var(--text3)}
+.cd-lbl{font-size:10px;color:var(--text2);margin-top:2px;text-align:right}
+.cd-date{font-size:11px;color:var(--text3);text-align:right}
+.card-acts{display:flex;gap:5px}
+.act-btn{background:none;border:0.5px solid var(--border2);border-radius:var(--rs);color:var(--text2);cursor:pointer;padding:5px 10px;font-size:11px;transition:all .15s;white-space:nowrap}
+.act-btn:hover{background:var(--bg3);color:var(--text)}
+.done-btn{background:none;border:0.5px solid var(--border2);border-radius:var(--rs);color:var(--text2);cursor:pointer;padding:5px 10px;font-size:11px;transition:all .15s}
+.done-btn:hover{background:var(--greenbg);color:var(--green);border-color:var(--greenborder)}
+.done-btn.active-done{background:var(--greenbg);color:var(--green);border-color:var(--greenborder)}
+.done-btn.active-done:hover{background:var(--redbg);color:var(--red);border-color:var(--redborder)}
+.divider{height:0.5px;background:var(--border);margin:0 16px}
+.card-sec{padding:10px 16px}
+.sec-lbl{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px}
+.ms-list{display:flex;flex-direction:column;gap:6px}
+.ms-row{display:flex;align-items:center;gap:9px}
+.ms-date{font-size:11px;color:var(--text2);min-width:62px;font-variant-numeric:tabular-nums}
 .ms-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.ms-dot.done{background:var(--green)}
-.ms-dot.active{background:var(--yellow)}
-.ms-dot.pending{background:var(--border2)}
-.ms-dot.air{background:var(--red)}
+.ms-dot.done{background:var(--green)}.ms-dot.active{background:var(--yellow)}.ms-dot.pending{background:var(--border2)}.ms-dot.air{background:var(--red)}
 .ms-text{font-size:13px;color:var(--text);flex:1}
 .ms-tag{font-size:10px;padding:1px 6px;border-radius:3px}
 .ms-tag.brand{background:var(--redbg);color:var(--red);border:0.5px solid var(--redborder)}
 .ms-tag.soon{background:var(--yellowbg);color:var(--yellow);border:0.5px solid var(--yellowborder)}
-
-/* Flags */
-.flags{display:flex;flex-direction:column;gap:6px}
-.flag{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:var(--radius-sm);font-size:12px}
+.flags{display:flex;flex-direction:column;gap:5px}
+.flag{display:flex;align-items:flex-start;gap:7px;padding:7px 9px;border-radius:var(--rs);font-size:12px;line-height:1.4}
 .flag.red{background:var(--redbg);color:var(--red);border:0.5px solid var(--redborder)}
 .flag.yellow{background:var(--yellowbg);color:var(--yellow);border:0.5px solid var(--yellowborder)}
-.flag-icon{font-size:13px;flex-shrink:0;line-height:1.4}
-
-/* Episodes */
-.eps-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
-.ep{background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 8px;text-align:center}
-.ep.active{border-color:var(--yellow)}
-.ep-num{font-size:10px;color:var(--text2);margin-bottom:4px}
-.ep-date{font-size:13px;font-weight:500}
-.ep-status{font-size:10px;margin-top:3px}
-.ep-status.active{color:var(--yellow)}
-.ep-status.pending{color:var(--text3)}
-
-/* Checklist */
-.checklist-toggle{width:100%;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:12px 18px;color:var(--text2);font-size:12px;border-top:0.5px solid var(--border)}
-.checklist-toggle:hover{background:var(--bg3)}
-.cl-progress{display:flex;align-items:center;gap:8px}
-.progress-bar{width:80px;height:3px;background:var(--bg4);border-radius:2px;overflow:hidden}
-.progress-fill{height:100%;background:var(--green);border-radius:2px;transition:width .3s}
-.checklist-body{padding:4px 18px 14px;display:none}
-.cl-item{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:0.5px solid var(--border);cursor:pointer}
+.flag-ico{font-size:12px;flex-shrink:0;margin-top:1px}
+.cl-toggle{width:100%;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:9px 16px;color:var(--text2);font-size:12px;border-top:0.5px solid var(--border)}
+.cl-toggle:hover{background:var(--bg3)}
+.cl-prog{display:flex;align-items:center;gap:8px}
+.prog-bar{width:70px;height:3px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;background:var(--green);border-radius:2px;transition:width .3s}
+.cl-body{padding:4px 16px 12px;display:none}
+.cl-item{display:flex;align-items:center;gap:9px;padding:5px 0;border-bottom:0.5px solid var(--border);cursor:pointer}
 .cl-item:last-child{border-bottom:none}
-.cl-item input{accent-color:var(--green);width:14px;height:14px;cursor:pointer;flex-shrink:0}
-.cl-text{font-size:13px;color:var(--text);flex:1}
-.cl-text.done{text-decoration:line-through;color:var(--text3)}
+.cl-item input{accent-color:var(--green);width:13px;height:13px;cursor:pointer;flex-shrink:0}
+.cl-txt{font-size:13px;color:var(--text);flex:1}
+.cl-txt.done{text-decoration:line-through;color:var(--text3)}
+.cl-right{display:flex;gap:5px;align-items:center;flex-shrink:0}
+.cl-who{font-size:10px;padding:1px 6px;border-radius:3px;background:var(--bg4);color:var(--text2);border:0.5px solid var(--border)}
 .cl-due{font-size:11px;color:var(--text2)}
 .cl-due.urgent{color:var(--red);font-weight:500}
-.cl-assignee{font-size:10px;padding:2px 6px;border-radius:3px;background:var(--bg4);color:var(--text2);border:0.5px solid var(--border)}
-.cl-who{display:flex;gap:5px;align-items:center}
-
-/* Add project */
-.add-btn{display:flex;align-items:center;gap:8px;padding:14px 18px;border:0.5px dashed var(--border2);border-radius:var(--radius);background:none;color:var(--text2);cursor:pointer;font-size:13px;width:100%;transition:all .15s;margin-top:4px}
+/* Series episodes */
+.series-eps{padding:0 16px 10px}
+.ep-row{border:0.5px solid var(--border);border-radius:var(--rs);margin-bottom:5px;overflow:hidden}
+.ep-row.ep-done{opacity:.38;border-style:dashed}
+.ep-hd{display:flex;align-items:center;gap:9px;padding:8px 11px;cursor:pointer;background:var(--bg3);user-select:none}
+.ep-hd:hover{background:var(--bg4)}
+.ep-num{font-size:11px;font-weight:600;color:var(--text2);min-width:38px;flex-shrink:0}
+.ep-title{font-size:13px;font-weight:500;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ep-meta{font-size:10px;color:var(--text3);flex-shrink:0}
+.ep-air-tag{font-size:11px;flex-shrink:0}
+.ep-air-tag.urgent{color:var(--red);font-weight:500}
+.ep-air-tag.soon{color:var(--yellow)}
+.ep-air-tag.ok{color:var(--text2)}
+.ep-done-btn{background:none;border:0.5px solid var(--border);border-radius:3px;color:var(--text3);cursor:pointer;padding:2px 7px;font-size:10px;flex-shrink:0}
+.ep-done-btn:hover{background:var(--greenbg);color:var(--green);border-color:var(--greenborder)}
+.ep-done-btn.ep-done-active{background:var(--greenbg);color:var(--green);border-color:var(--greenborder)}
+.ep-done-btn.ep-done-active:hover{background:var(--redbg);color:var(--red);border-color:var(--redborder)}
+.ep-arr{font-size:9px;color:var(--text3);flex-shrink:0;transition:transform .18s}
+.ep-arr.open{transform:rotate(90deg)}
+.ep-body{display:none;padding:10px 12px 12px;border-top:0.5px solid var(--border);background:var(--bg2)}
+.ep-sec-lbl{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.ep-ms{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.ep-tasks{display:flex;flex-direction:column;gap:3px}
+.ep-task{display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:4px 0;border-bottom:0.5px solid var(--border)}
+.ep-task:last-child{border-bottom:none}
+.ep-task input{accent-color:var(--green);width:12px;height:12px;cursor:pointer;flex-shrink:0}
+.ep-task-txt{flex:1;color:var(--text)}
+.ep-task-txt.done{text-decoration:line-through;color:var(--text3)}
+.ep-task-due{font-size:10px;color:var(--text3)}
+.ep-task-due.urgent{color:var(--red)}
+/* Add btn */
+.add-btn{display:flex;align-items:center;gap:8px;padding:11px 16px;border:0.5px dashed var(--border2);border-radius:var(--r);background:none;color:var(--text2);cursor:pointer;font-size:13px;width:100%;transition:all .15s;margin-top:4px}
 .add-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--redbg)}
-.plus{width:20px;height:20px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1}
-
+/* Checklist view */
+.gcl-group{margin-bottom:16px}
+.gcl-group-lbl{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:7px}
+.gcl-list{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden}
+.gcl-item{display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:0.5px solid var(--border);cursor:pointer}
+.gcl-item:last-child{border-bottom:none}
+.gcl-item:hover{background:var(--bg3)}
+.gcl-item input{accent-color:var(--green);width:13px;height:13px;cursor:pointer;flex-shrink:0}
+.gcl-main{flex:1;min-width:0}
+.gcl-txt{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gcl-txt.done{text-decoration:line-through;color:var(--text3)}
+.gcl-sub{font-size:11px;color:var(--text3);margin-top:1px}
+/* Archive */
+.arch-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.arch-title{font-size:14px;font-weight:600;color:var(--text2)}
+.arch-sub{font-size:12px;color:var(--text3)}
+/* Search */
+.search-wrap{margin-bottom:12px}
+.search-inp{width:100%;background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--rs);color:var(--text);font-size:13px;padding:8px 12px;outline:none}
+.search-inp:focus{border-color:var(--text3)}
 /* Modal */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
-.modal-overlay.open{display:flex}
-.modal{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--radius);width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
-.modal-header{padding:18px 20px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.modal-title{font-size:15px;font-weight:600}
-.modal-close{background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;line-height:1;padding:4px}
-.modal-close:hover{color:var(--text)}
-.modal-body{padding:20px}
-.form-group{margin-bottom:16px}
-.form-label{font-size:12px;color:var(--text2);margin-bottom:6px;display:block;font-weight:500}
-.form-input, .form-select, .form-textarea{width:100%;background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:13px;padding:9px 12px;outline:none;font-family:inherit}
-.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent)}
-.form-textarea{resize:vertical;min-height:80px}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.form-select option{background:var(--bg2)}
-.modal-footer{padding:14px 20px;border-top:0.5px solid var(--border);display:flex;gap:10px;justify-content:flex-end}
-.btn{padding:8px 18px;border-radius:var(--radius-sm);font-size:13px;cursor:pointer;border:0.5px solid var(--border2);font-weight:500;transition:all .15s}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn.primary:hover{opacity:.85}
-.btn.ghost{background:none;color:var(--text2)}
-.btn.ghost:hover{background:var(--bg3);color:var(--text)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}
+.overlay.open{display:flex}
+.modal{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--r);width:100%;max-width:540px;max-height:92vh;overflow-y:auto}
+.modal-hd{padding:15px 18px 12px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-ttl{font-size:15px;font-weight:600}
+.modal-x{background:none;border:none;color:var(--text2);cursor:pointer;font-size:20px;line-height:1;padding:2px 6px}
+.modal-x:hover{color:var(--text)}
+.modal-body{padding:16px 18px}
+.fg{margin-bottom:13px}
+.fl{font-size:12px;color:var(--text2);margin-bottom:5px;display:block;font-weight:500}
+.fi,.fs,.ft{width:100%;background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--rs);color:var(--text);font-size:13px;padding:8px 11px;outline:none;font-family:inherit}
+.fi:focus,.fs:focus,.ft:focus{border-color:var(--accent)}
+.ft{resize:vertical;min-height:65px}
+.fs option{background:var(--bg2)}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-ft{padding:11px 18px;border-top:0.5px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.btn{padding:7px 16px;border-radius:var(--rs);font-size:13px;cursor:pointer;border:0.5px solid var(--border2);font-weight:500;transition:all .15s}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{opacity:.85}
+.btn.ghost{background:none;color:var(--text2)}.btn.ghost:hover{background:var(--bg3);color:var(--text)}
 .btn.danger{background:var(--redbg);border-color:var(--redborder);color:var(--red)}
-.btn.danger:hover{background:var(--redborder)}
-
-/* Flag input */
-.flags-input{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
-.flag-row{display:flex;gap:6px;align-items:center}
-.flag-row select{background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--radius-sm);padding:6px 8px;font-size:12px;outline:none}
-.flag-row input{flex:1;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--radius-sm);padding:6px 10px;font-size:12px;outline:none}
-.flag-row button{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 6px}
-.flag-row button:hover{color:var(--red)}
-.add-flag-btn{background:none;border:0.5px dashed var(--border2);border-radius:var(--radius-sm);color:var(--text2);cursor:pointer;font-size:12px;padding:6px 12px;width:fit-content}
-.add-flag-btn:hover{border-color:var(--text2);color:var(--text)}
-
-/* Edit/delete actions */
-.card-actions{display:flex;gap:6px;flex-shrink:0}
-.icon-btn{background:none;border:0.5px solid var(--border);border-radius:var(--radius-sm);color:var(--text2);cursor:pointer;padding:5px 8px;font-size:12px;transition:all .15s}
-.icon-btn:hover{background:var(--bg3);color:var(--text)}
-.icon-btn.del:hover{border-color:var(--red);color:var(--red);background:var(--redbg)}
-
-/* Sync bar */
-.sync-bar{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--bg3);border:0.5px solid var(--border2);border-radius:20px;padding:8px 16px;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:8px;opacity:0;transition:opacity .3s;pointer-events:none}
+.fi-row{display:flex;gap:6px;align-items:center;margin-bottom:5px}
+.fi-row .fi{padding:6px 9px;font-size:12px}
+.fi-row select{background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--rs);padding:6px 8px;font-size:12px;outline:none;flex-shrink:0}
+.rm-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 5px;flex-shrink:0}
+.rm-btn:hover{color:var(--red)}
+.add-sub{background:none;border:0.5px dashed var(--border2);border-radius:var(--rs);color:var(--text2);cursor:pointer;font-size:12px;padding:5px 11px;margin-top:4px}
+.add-sub:hover{border-color:var(--text3);color:var(--text)}
+.ms-edit-row{display:flex;gap:5px;align-items:center;margin-bottom:4px}
+.ms-edit-row input,.ms-edit-row select{background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--rs);padding:5px 8px;font-size:12px;outline:none}
+.ms-edit-row input[type=text]{flex:1}.ms-edit-row input[type=date]{max-width:130px}
+.ms-edit-row select{background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--rs);padding:5px 7px;font-size:12px;outline:none}
+/* Sync */
+.sync-bar{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--bg3);border:0.5px solid var(--border2);border-radius:20px;padding:7px 14px;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:7px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:200}
 .sync-bar.show{opacity:1}
 .sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pulse 1.5s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-
-/* Empty */
-.empty{text-align:center;padding:40px 20px;color:var(--text2)}
-.empty-icon{font-size:32px;margin-bottom:12px;opacity:.4}
-
-/* Loading */
-.loading{text-align:center;padding:40px;color:var(--text2);font-size:13px}
-
-/* Section views */
-.view{display:none}
-.view.active{display:block}
-
-/* Checklist modal tasks */
-.cl-section{margin-bottom:10px}
-.cl-section-label{font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
-.ms-items{display:flex;flex-direction:column;gap:4px}
-.ms-input-row{display:flex;gap:6px;margin-top:6px}
-.ms-input-row input{flex:1;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--radius-sm);padding:6px 10px;font-size:12px;outline:none}
-.ms-input-row input:focus{border-color:var(--accent)}
-.ms-input-row select{background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--radius-sm);padding:6px 8px;font-size:12px;outline:none}
-.ms-item-row{display:flex;align-items:center;gap:6px}
-.ms-item-row input[type=text]{flex:1;background:var(--bg3);border:0.5px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:5px 8px;font-size:12px;outline:none}
-.ms-item-row select{background:var(--bg3);border:0.5px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:5px 6px;font-size:11px;outline:none}
-.ms-item-row button{background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 5px;font-size:15px}
-.ms-item-row button:hover{color:var(--red)}
-
-@media(max-width:600px){
-  .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .eps-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .form-row{grid-template-columns:1fr}
-}
+.empty{text-align:center;padding:36px 20px;color:var(--text3);font-size:13px}
+@media(max-width:600px){.metrics{grid-template-columns:repeat(2,1fr)}.frow{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -209,636 +206,610 @@ body{background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line
   <div class="topbar">
     <div class="logo">
       <div class="logo-v">V</div>
-      <div>
-        <div class="logo-name">Vietsuccess</div>
-        <div class="logo-sub">Production Dashboard</div>
-      </div>
+      <div><div class="logo-name">Vietsuccess</div><div class="logo-sub">Production Dashboard</div></div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <div class="today" style="margin-right:8px">
-        <strong id="today-str">--</strong>
-        <span id="active-count">-- dự án</span>
-      </div>
-      <button class="icon-btn" onclick="exportData()" title="Export JSON gửi team">&#8595; Export</button>
-      <label class="icon-btn" style="cursor:pointer" title="Import JSON từ team">&#8593; Import<input type="file" accept=".json" onchange="importData(event)" style="display:none"></label>
+    <div class="topbar-right">
+      <div class="today-info"><div class="today-date" id="today-str">--</div><div class="today-sub" id="active-count">--</div></div>
+      <button class="icon-btn" onclick="exportData()">↓ Export</button>
+      <label class="icon-btn" style="cursor:pointer">↑ Import<input type="file" accept=".json" onchange="importData(event)" style="display:none"></label>
     </div>
   </div>
 
-  <div class="metrics" id="metrics">
-    <div class="metric"><div class="metric-label">Dự án đang chạy</div><div class="metric-value" id="m-total">—</div></div>
-    <div class="metric"><div class="metric-label">Air date gần nhất</div><div class="metric-value yellow" id="m-next">—</div></div>
-    <div class="metric"><div class="metric-label">Task cần làm hôm nay</div><div class="metric-value red" id="m-urgent">—</div></div>
-    <div class="metric"><div class="metric-label">Cờ đỏ cần xử lý</div><div class="metric-value red" id="m-flags">—</div></div>
+  <div class="metrics">
+    <div class="metric"><div class="metric-lbl">Dự án đang chạy</div><div class="metric-val" id="m-active">—</div></div>
+    <div class="metric"><div class="metric-lbl">Air gần nhất</div><div class="metric-val yellow" id="m-next">—</div></div>
+    <div class="metric"><div class="metric-lbl">Task hôm nay</div><div class="metric-val red" id="m-today">—</div></div>
+    <div class="metric"><div class="metric-lbl">Cờ đỏ</div><div class="metric-val red" id="m-flags">—</div></div>
   </div>
 
-  <div class="tabs">
-    <button class="tab active" onclick="switchView('projects')">Dự án</button>
-    <button class="tab" onclick="switchView('checklist')">Checklist tổng</button>
+  <div class="main-tabs">
+    <button class="main-tab active" onclick="switchTab('single',this)">Tập lẻ <span class="tab-badge" id="b-single">0</span></button>
+    <button class="main-tab" onclick="switchTab('series',this)">Series <span class="tab-badge" id="b-series">0</span></button>
+    <button class="main-tab" onclick="switchTab('checklist',this)">Checklist</button>
+    <button class="main-tab" onclick="switchTab('archive',this)">Lưu trữ <span class="tab-badge gray" id="b-archive">0</span></button>
   </div>
 
-  <div id="view-projects" class="view active">
-    <div class="cards" id="cards-container">
-      <div class="loading">Đang tải dữ liệu...</div>
-    </div>
-    <button class="add-btn" onclick="openAddModal()" style="margin-top:14px">
-      <span class="plus">+</span>
-      Thêm dự án mới
-    </button>
+  <div class="view active" id="view-single">
+    <div class="cards" id="cards-single"></div>
+    <button class="add-btn" onclick="openAdd('single')">+ Thêm tập lẻ</button>
   </div>
 
-  <div id="view-checklist" class="view">
-    <div id="global-checklist"></div>
+  <div class="view" id="view-series">
+    <div class="cards" id="cards-series"></div>
+    <button class="add-btn" onclick="openAdd('series')">+ Thêm series</button>
   </div>
-</div>
 
-<!-- Add/Edit Modal -->
-<div class="modal-overlay" id="modal">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-title">Thêm dự án mới</div>
-      <button class="modal-close" onclick="closeModal()">×</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="edit-id">
-      <div class="form-group">
-        <label class="form-label">Tên dự án *</label>
-        <input class="form-input" id="f-name" placeholder="VD: The Quoc Khanh Show — Tập 5">
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Loại dự án</label>
-          <select class="form-select" id="f-type">
-            <option value="organic">Organic</option>
-            <option value="sponsor">Sponsored</option>
-            <option value="series">IP/Mini Series</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Ngôn ngữ</label>
-          <select class="form-select" id="f-lang">
-            <option value="viet">Tiếng Việt</option>
-            <option value="eng">Tiếng Anh</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Host</label>
-          <input class="form-input" id="f-host" placeholder="VD: Quốc Khánh">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Guest</label>
-          <input class="form-input" id="f-guest" placeholder="VD: TBD">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Ngày quay *</label>
-          <input class="form-input" id="f-shoot" type="date">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Ngày air *</label>
-          <input class="form-input" id="f-air" type="date">
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Brand / Sponsor (nếu có)</label>
-        <input class="form-input" id="f-brand" placeholder="VD: Manulife Vietnam">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Ghi chú</label>
-        <textarea class="form-textarea" id="f-note" placeholder="VD: 5 tập, bi-weekly, cần làm identity + trailer"></textarea>
-      </div>
+  <div class="view" id="view-checklist">
+    <div class="search-wrap"><input class="search-inp" id="cl-search" placeholder="Tìm task..." oninput="renderChecklist()"></div>
+    <div id="gcl"></div>
+  </div>
 
-      <div class="form-group">
-        <label class="form-label">Milestones</label>
-        <div class="ms-items" id="ms-items"></div>
-        <div class="ms-input-row">
-          <input id="ms-new-date" type="date" placeholder="Ngày">
-          <input id="ms-new-text" placeholder="Tên milestone" style="flex:2">
-          <select id="ms-new-status">
-            <option value="pending">Chờ</option>
-            <option value="active">Đang làm</option>
-            <option value="done">Xong</option>
-            <option value="air">Air</option>
-          </select>
-          <button class="btn ghost" onclick="addMilestone()" style="padding:6px 12px;font-size:13px">+</button>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Cờ rủi ro</label>
-        <div class="flags-input" id="flags-input"></div>
-        <button class="add-flag-btn" onclick="addFlagInput()">+ Thêm cờ</button>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Checklist PM</label>
-        <div id="tasks-input"></div>
-        <div class="ms-input-row">
-          <input id="task-new-text" placeholder="Tên task">
-          <input id="task-new-due" type="date">
-          <input id="task-new-who" placeholder="Assignee" style="max-width:90px">
-          <button class="btn ghost" onclick="addTaskInput()" style="padding:6px 12px;font-size:13px">+</button>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn danger" id="delete-btn" onclick="deleteProject()" style="display:none;margin-right:auto">Xóa dự án</button>
-      <button class="btn ghost" onclick="closeModal()">Hủy</button>
-      <button class="btn primary" onclick="saveProject()">Lưu dự án</button>
-    </div>
+  <div class="view" id="view-archive">
+    <div class="arch-hd"><div class="arch-title">Đã hoàn thành</div><div class="arch-sub" id="arch-sub">0 dự án</div></div>
+    <div class="search-wrap"><input class="search-inp" id="arch-search" placeholder="Tìm..." oninput="renderArchive()"></div>
+    <div id="arch-list"></div>
   </div>
 </div>
 
-<div class="sync-bar" id="sync-bar">
-  <div class="sync-dot"></div>
-  <span id="sync-msg">Đã đồng bộ</span>
+<div class="overlay" id="modal">
+<div class="modal">
+  <div class="modal-hd"><div class="modal-ttl" id="modal-ttl">Thêm dự án</div><button class="modal-x" onclick="closeModal()">×</button></div>
+  <div class="modal-body">
+    <input type="hidden" id="edit-id"><input type="hidden" id="edit-kind">
+    <div class="fg"><label class="fl">Tên dự án *</label><input class="fi" id="f-name" placeholder="VD: The Quoc Khanh Show — Ep 124"></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Loại</label>
+        <select class="fs" id="f-type" onchange="onTypeChange()">
+          <option value="organic">Organic</option><option value="sponsor">Sponsored</option><option value="series">Series</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Ngôn ngữ</label>
+        <select class="fs" id="f-lang"><option value="viet">Tiếng Việt</option><option value="eng">Tiếng Anh</option></select>
+      </div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Host</label><input class="fi" id="f-host" placeholder="Quốc Khánh"></div>
+      <div class="fg"><label class="fl">Brand / Client</label><input class="fi" id="f-brand" placeholder="Manulife Vietnam"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Ngày quay</label><input class="fi" type="date" id="f-shoot"></div>
+      <div class="fg"><label class="fl">Ngày air</label><input class="fi" type="date" id="f-air"></div>
+    </div>
+    <div class="fg"><label class="fl">Ghi chú</label><textarea class="ft" id="f-note" placeholder="VD: 5 tập, bi-weekly..."></textarea></div>
+    <div id="eps-section" style="display:none">
+      <div class="fg">
+        <label class="fl">Số tập <span style="color:var(--text3);font-weight:400">(Guest · Ngày quay · Ngày air)</span></label>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <input class="fi" type="number" id="f-ep-count" value="5" min="1" max="20" style="max-width:80px" onchange="renderEpInputs()">
+          <span style="font-size:12px;color:var(--text2)">tập</span>
+        </div>
+        <div id="ep-inputs"></div>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Milestones</label>
+      <div id="ms-items"></div>
+      <div class="ms-edit-row" style="margin-top:5px">
+        <input type="date" id="ms-d"><input type="text" id="ms-t" placeholder="Milestone" style="flex:1">
+        <select id="ms-s"><option value="pending">Chờ</option><option value="active">Đang</option><option value="done">Xong</option><option value="air">Air</option></select>
+        <button class="btn ghost" onclick="addMs()" style="padding:5px 10px;font-size:13px">+</button>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Cờ rủi ro</label>
+      <div id="flags-inp"></div>
+      <button class="add-sub" onclick="addFlag()">+ Thêm cờ</button>
+    </div>
+    <div class="fg">
+      <label class="fl">Checklist PM</label>
+      <div id="tasks-inp"></div>
+      <div class="fi-row" style="margin-top:4px">
+        <input class="fi" id="tn-txt" placeholder="Task" style="flex:3">
+        <input class="fi" type="date" id="tn-due" style="max-width:130px">
+        <input class="fi" id="tn-who" placeholder="Ai" style="max-width:70px">
+        <button class="btn ghost" onclick="addTask()" style="padding:6px 10px">+</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal-ft">
+    <button class="btn danger" id="del-btn" onclick="deleteProj()" style="display:none;margin-right:auto">Xóa</button>
+    <button class="btn ghost" onclick="closeModal()">Hủy</button>
+    <button class="btn primary" onclick="saveProj()">Lưu</button>
+  </div>
 </div>
+</div>
+
+<div class="sync-bar" id="sync-bar"><div class="sync-dot"></div><span id="sync-msg">Sync</span></div>
 
 <script>
-const TODAY = new Date('2026-03-29');
-const STORAGE_KEY = 'vs_projects_v3';
+const FB_CFG = {
+  apiKey:"AIzaSyBjdbvg9XHPK7Xm296pH2O9_KrHJu1dz90",
+  authDomain:"vietsuccess-project-dashboard.firebaseapp.com",
+  projectId:"vietsuccess-project-dashboard",
+  storageBucket:"vietsuccess-project-dashboard.firebasestorage.app",
+  messagingSenderId:"772664824590",
+  appId:"1:772664824590:web:7597370ae9165344bbfd5f"
+};
+const COL='vs_v5';
+const USE_FB=true;
+const TODAY='2026-03-29';
+const TODAY_D=new Date(TODAY);
 
-// ── Helpers ──────────────────────────────────────────────────────
-function daysUntil(dateStr){
-  if(!dateStr) return null;
-  const d = new Date(dateStr);
-  return Math.round((d - TODAY) / 86400000);
-}
-function fmtDate(dateStr){
-  if(!dateStr) return '—';
-  const d = new Date(dateStr);
-  return `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getFullYear()}`;
-}
-function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
-function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+let projects=[], db=null;
+let tMs=[], tFlags=[], tTasks=[], tEps=[];
 
-let projects = [];
-let tempMs = [];
-let tempFlags = [];
-let tempTasks = [];
+// helpers
+const D=s=>!s?null:Math.round((new Date(s)-TODAY_D)/86400000);
+const F=s=>{if(!s)return'—';const x=new Date(s);return`${x.getDate().toString().padStart(2,'0')}/${(x.getMonth()+1).toString().padStart(2,'0')}/${x.getFullYear()}`};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const cdCls=d=>d===null?'gray':d<=3?'red':d<=10?'yellow':'green';
 
-// ── Storage — localStorage (works anywhere) ───────────────────────
-function loadProjects(){
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw) projects = JSON.parse(raw);
-  } catch(e){ projects = []; }
-  if(!projects.length) projects = getDefaultProjects();
-  renderAll();
-}
-
-function saveProjects(){
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
-    showSync('Đã lưu');
-  } catch(e){ showSync('Lỗi lưu dữ liệu'); }
-}
-
-function refreshLoop(){
-  // localStorage là per-browser nên không cần poll
-  // Nếu muốn sync team thực sự → host lên Netlify + dùng chung 1 máy
-  // hoặc Export/Import JSON bên dưới
-}
-
-function showSync(msg){
-  const bar = document.getElementById('sync-bar');
-  document.getElementById('sync-msg').textContent = msg;
-  bar.classList.add('show');
-  setTimeout(()=>bar.classList.remove('show'), 2500);
-}
-
-// ── Default data ──────────────────────────────────────────────────
-function getDefaultProjects(){
-  return [
-    {
-      id: uid(),
-      name: 'The Quoc Khanh Show',
-      type: 'organic', lang: 'viet',
-      host: 'Quốc Khánh', guest: 'TBD', brand: '',
-      shootDate: '2026-04-01', airDate: '2026-04-12',
-      note: 'Organic, 1 tập, tiếng Việt',
-      milestones: [
-        {date:'2026-04-01', text:'Shooting', status:'active'},
-        {date:'2026-04-06', text:'Content fullshow (Biên tập)', status:'pending'},
-        {date:'2026-04-07', text:'Fullshow + Content social', status:'pending'},
-        {date:'2026-04-08', text:'QC fullshow + Clip social', status:'pending'},
-        {date:'2026-04-11', text:'Backup day + Teaser 20h00', status:'pending'},
-        {date:'2026-04-12', text:'AIR fullshow 12h00', status:'air'},
-      ],
-      flags: [
-        {level:'red', text:'Email shooting invitation chưa gửi — còn 3 ngày, gửi ngay hôm nay'},
-        {level:'yellow', text:'Chưa confirm team quay + makeup ngày 01/04'},
-      ],
-      tasks: [
-        {id:uid(), text:'Gửi email shooting invitation', due:'2026-03-29', who:'PM', done:false},
-        {id:uid(), text:'Invite calendar anh Khánh', due:'2026-03-29', who:'PM', done:false},
-        {id:uid(), text:'Book team quay anh Ninh (01/04)', due:'2026-03-30', who:'PM', done:false},
-        {id:uid(), text:'Book makeup chị Ngọc / Gạo Nâu', due:'2026-03-30', who:'PM', done:false},
-        {id:uid(), text:'Tạo task Asana (air 12/04)', due:'2026-03-30', who:'PM', done:false},
-        {id:uid(), text:'Confirm calltime cho tất cả các bên', due:'2026-03-31', who:'PM', done:false},
-        {id:uid(), text:'Chuẩn bị quà + nước on-set', due:'2026-03-31', who:'PM', done:false},
-      ]
-    },
-    {
-      id: uid(),
-      name: 'Vietsuccess x Manulife Vietnam',
-      type: 'series', lang: 'viet',
-      host: 'Quốc Khánh', guest: 'TBD', brand: 'Manulife Vietnam',
-      shootDate: '2026-04-01', airDate: '2026-04-14',
-      note: '5 tập, bi-weekly. Tập 1 air 14/04, Tập 2–5: 28/04, 12/05, 26/05, 09/06',
-      milestones: [
-        {date:'2026-04-01', text:'Shooting tập 1', status:'active'},
-        {date:'2026-04-07', text:'Editing hoàn thành', status:'pending'},
-        {date:'2026-04-08', text:'Review & feedback', status:'pending', brand:true},
-        {date:'2026-04-10', text:'Final video + Social assets', status:'pending'},
-        {date:'2026-04-12', text:'Trailer show 20h00', status:'pending'},
-        {date:'2026-04-14', text:'AIR tập 1 — 12h00', status:'air'},
-      ],
-      flags: [
-        {level:'red', text:'PPM + Callsheet chưa gửi Manulife — deadline 30/03'},
-        {level:'yellow', text:'Lịch quay tập 2–5 chưa chốt — cần ghi hình đủ 3/5 tập trước khi air'},
-      ],
-      tasks: [
-        {id:uid(), text:'Tạo PPM gửi Manulife', due:'2026-03-30', who:'PM', done:false},
-        {id:uid(), text:'Tạo callsheet tập 1 gửi Manulife', due:'2026-03-30', who:'PM', done:false},
-        {id:uid(), text:'Book team quay anh Ninh (01/04)', due:'2026-03-30', who:'PM', done:false},
-        {id:uid(), text:'Chase kịch bản chốt trước shooting', due:'2026-03-31', who:'PM', done:false},
-        {id:uid(), text:'Confirm calltime tất cả các bên', due:'2026-03-31', who:'PM', done:false},
-        {id:uid(), text:'Tạo task Asana (air 14/04)', due:'2026-03-30', who:'PM', done:false},
-        {id:uid(), text:'Chuẩn bị quà + nước on-set', due:'2026-03-31', who:'PM', done:false},
-        {id:uid(), text:'Propose lịch quay tập 2–5 cho Manulife', due:'2026-04-04', who:'PM', done:false},
-      ]
-    }
-  ];
-}
-
-// ── Render ────────────────────────────────────────────────────────
-function renderAll(){
-  renderMetrics();
-  renderCards();
-  renderGlobalChecklist();
-  const d = TODAY;
-  document.getElementById('today-str').textContent =
-    d.toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
-  document.getElementById('active-count').textContent = projects.length + ' dự án đang chạy';
-}
-
-function renderMetrics(){
-  document.getElementById('m-total').textContent = projects.length;
-  const days = projects.map(p=>daysUntil(p.airDate)).filter(d=>d!==null && d>=0);
-  const minDay = days.length ? Math.min(...days) : null;
-  document.getElementById('m-next').textContent = minDay !== null ? minDay + ' ngày' : '—';
-  let urgent = 0;
-  projects.forEach(p=>(p.tasks||[]).forEach(t=>{
-    if(!t.done && t.due && daysUntil(t.due)<=1) urgent++;
-  }));
-  document.getElementById('m-urgent').textContent = urgent;
-  let flags = 0;
-  projects.forEach(p=>flags += (p.flags||[]).filter(f=>f.level==='red').length);
-  document.getElementById('m-flags').textContent = flags;
-}
-
-function renderCards(){
-  const c = document.getElementById('cards-container');
-  if(!projects.length){
-    c.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div>Chưa có dự án nào<br><span style="font-size:12px">Bấm "Thêm dự án mới" để bắt đầu</span></div></div>';
-    return;
+// storage
+async function init(){
+  try{
+    firebase.initializeApp(FB_CFG);
+    db=firebase.firestore();
+    db.collection(COL).onSnapshot(snap=>{
+      projects=snap.docs.map(d=>({id:d.id,...d.data()}));
+      if(!projects.length){projects=defaults();bulkSave();}
+      else renderAll();
+      showSync('Sync ✓');
+    },e=>showSync('⚠ '+e.message));
+  }catch(e){
+    try{const r=localStorage.getItem('vs_v5');if(r)projects=JSON.parse(r);}catch(e2){}
+    if(!projects.length)projects=defaults();
+    renderAll();showSync('Offline');
   }
-  c.innerHTML = projects.map(p=>cardHTML(p)).join('');
+}
+async function bulkSave(){
+  if(db){
+    try{
+      const batch=db.batch();
+      const ex=await db.collection(COL).get();
+      const cur=projects.map(p=>p.id);
+      ex.docs.filter(d=>!cur.includes(d.id)).forEach(d=>batch.delete(d.ref));
+      projects.forEach(p=>{const{id,...data}=p;batch.set(db.collection(COL).doc(id),data);});
+      await batch.commit();
+    }catch(e){showSync('⚠ '+e.message);}
+  }else{localStorage.setItem('vs_v5',JSON.stringify(projects));renderAll();showSync('Saved');}
+}
+async function saveOne(p){
+  if(db){const{id,...d}=p;await db.collection(COL).doc(id).set(d).catch(e=>showSync('⚠ '+e.message));}
+  else{await bulkSave();}
+}
+async function delOne(id){
+  if(db){await db.collection(COL).doc(id).delete().catch(e=>showSync('⚠ '+e.message));}
+  else{projects=projects.filter(p=>p.id!==id);await bulkSave();}
+}
+function showSync(msg){
+  const b=document.getElementById('sync-bar');
+  document.getElementById('sync-msg').textContent=msg;
+  b.classList.add('show');clearTimeout(b._t);
+  b._t=setTimeout(()=>b.classList.remove('show'),3000);
 }
 
-function cardHTML(p){
-  const days = daysUntil(p.airDate);
-  const cn = days===null?'':days<=3?'red':days<=10?'yellow':'green';
+// defaults
+function defaults(){return[
+  {id:uid(),kind:'single',name:'The Quoc Khanh Show',type:'sponsor',lang:'viet',host:'Quốc Khánh',guest:'TBD',brand:'NAB',shootDate:'2026-04-01',airDate:'2026-04-12',note:'Organic · 1 tập · Tiếng Việt',done:false,
+   milestones:[{date:'2026-04-01',text:'Shooting',status:'active'},{date:'2026-04-06',text:'Content fullshow (Biên tập)',status:'pending'},{date:'2026-04-08',text:'QC fullshow + Clip social',status:'pending'},{date:'2026-04-11',text:'Backup day + Teaser 20h00',status:'pending'},{date:'2026-04-12',text:'AIR fullshow 12h00',status:'air'}],
+   flags:[{level:'red',text:'Email invitation chưa gửi — gửi ngay hôm nay'},{level:'yellow',text:'Chưa confirm team quay + makeup ngày 01/04'}],
+   tasks:[{id:uid(),text:'Gửi email shooting invitation',due:'2026-03-29',who:'PM',done:false},{id:uid(),text:'Invite calendar anh Khánh',due:'2026-03-29',who:'PM',done:false},{id:uid(),text:'Book team quay anh Ninh',due:'2026-03-30',who:'PM',done:false},{id:uid(),text:'Book makeup',due:'2026-03-30',who:'PM',done:false},{id:uid(),text:'Tạo task Asana (air 12/04)',due:'2026-03-30',who:'PM',done:false},{id:uid(),text:'Confirm calltime tất cả',due:'2026-03-31',who:'PM',done:false}]},
+  {id:uid(),kind:'series',name:'Manulife Vietnam',type:'series',lang:'viet',host:'Quốc Khánh',guest:'TBD',brand:'Manulife Vietnam',shootDate:'2026-04-01',airDate:'2026-04-14',note:'5 tập · Bi-weekly · Sponsored',done:false,
+   milestones:[],flags:[{level:'red',text:'PPM + Callsheet chưa gửi Manulife — deadline 30/03'},{level:'yellow',text:'Lịch quay tập 2–5 chưa chốt — cần ghi hình 3/5 tập trước khi air'}],
+   tasks:[{id:uid(),text:'Tạo PPM gửi Manulife',due:'2026-03-30',who:'PM',done:false},{id:uid(),text:'Tạo callsheet tập 1',due:'2026-03-30',who:'PM',done:false},{id:uid(),text:'Chase kịch bản chốt trước shooting',due:'2026-03-31',who:'PM',done:false},{id:uid(),text:'Propose lịch quay tập 2–5',due:'2026-04-04',who:'PM',done:false}],
+   episodes:[
+    {id:uid(),ep:1,guest:'TBD',shootDate:'2026-04-01',airDate:'2026-04-14',done:false,
+     milestones:[{date:'2026-04-01',text:'Shooting tập 1',status:'active'},{date:'2026-04-07',text:'Editing hoàn thành',status:'pending'},{date:'2026-04-08',text:'Review & feedback',status:'pending',brand:true},{date:'2026-04-10',text:'Final video + Social assets',status:'pending'},{date:'2026-04-12',text:'Teaser 20h00',status:'pending'},{date:'2026-04-14',text:'AIR tập 1 — 12h00',status:'air'}],
+     tasks:[{id:uid(),text:'Gửi BTS cho Manulife sau quay',due:'2026-04-01',who:'PM',done:false},{id:uid(),text:'Chase client review đúng hạn 08/04',due:'2026-04-08',who:'PM',done:false}]},
+    {id:uid(),ep:2,guest:'TBD',shootDate:'',airDate:'2026-04-28',done:false,milestones:[{date:'2026-04-28',text:'AIR tập 2 — 12h00',status:'air'}],tasks:[]},
+    {id:uid(),ep:3,guest:'TBD',shootDate:'',airDate:'2026-05-12',done:false,milestones:[{date:'2026-05-12',text:'AIR tập 3 — 12h00',status:'air'}],tasks:[]},
+    {id:uid(),ep:4,guest:'TBD',shootDate:'',airDate:'2026-05-26',done:false,milestones:[{date:'2026-05-26',text:'AIR tập 4 — 12h00',status:'air'}],tasks:[]},
+    {id:uid(),ep:5,guest:'TBD',shootDate:'',airDate:'2026-06-09',done:false,milestones:[{date:'2026-06-09',text:'AIR tập 5 — 12h00',status:'air'}],tasks:[]}
+   ]}
+];}
 
-  const typeBadge = p.type==='organic'?'<span class="badge organic">Organic</span>':
-    p.type==='sponsor'?'<span class="badge sponsor">Sponsored</span>':
-    '<span class="badge series">IP Series</span>';
-  const langBadge = p.lang==='eng'?'<span class="badge viet">Tiếng Anh</span>':'<span class="badge viet">Tiếng Việt</span>';
-  const brandBadge = p.brand?`<span class="badge sponsor">${esc(p.brand)}</span>`:'';
+// render
+function renderAll(){
+  const dn=new Date(TODAY);
+  document.getElementById('today-str').textContent=dn.toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
+  const act=projects.filter(p=>!p.done);
+  document.getElementById('active-count').textContent=act.length+' dự án đang chạy';
+  const singles=act.filter(p=>p.kind==='single');
+  const sers=act.filter(p=>p.kind==='series');
+  const arch=projects.filter(p=>p.done);
+  document.getElementById('b-single').textContent=singles.length;
+  document.getElementById('b-series').textContent=sers.length;
+  document.getElementById('b-archive').textContent=arch.length;
+  document.getElementById('arch-sub').textContent=arch.length+' dự án';
+  // metrics
+  document.getElementById('m-active').textContent=act.length;
+  let allD=[];
+  act.forEach(p=>{
+    const d=D(p.airDate);if(d!==null&&d>=0)allD.push(d);
+    (p.episodes||[]).filter(e=>!e.done).forEach(e=>{const d2=D(e.airDate);if(d2!==null&&d2>=0)allD.push(d2);});
+  });
+  document.getElementById('m-next').textContent=allD.length?Math.min(...allD)+'d':'—';
+  let today_t=0,flags=0;
+  act.forEach(p=>{
+    (p.tasks||[]).forEach(t=>{if(!t.done&&t.due&&D(t.due)<=0)today_t++;});
+    (p.episodes||[]).forEach(e=>(e.tasks||[]).forEach(t=>{if(!t.done&&t.due&&D(t.due)<=0)today_t++;}));
+    flags+=(p.flags||[]).filter(f=>f.level==='red').length;
+  });
+  document.getElementById('m-today').textContent=today_t;
+  document.getElementById('m-flags').textContent=flags;
+  renderSingle();renderSeries();renderChecklist();renderArchive();
+}
 
-  const msHTML = (p.milestones||[]).map(m=>`
-    <div class="ms">
-      <span class="ms-date">${fmtDate(m.date)}</span>
-      <span class="ms-dot ${m.status}"></span>
-      <span class="ms-text">${esc(m.text)}</span>
-      ${m.brand?'<span class="ms-tag brand">Client</span>':''}
-      ${daysUntil(m.date)<=3 && daysUntil(m.date)>=0 && m.status!='done'?'<span class="ms-tag soon">'+daysUntil(m.date)+'d</span>':''}
-    </div>`).join('');
-
-  const flagsHTML = (p.flags||[]).map(f=>`
-    <div class="flag ${f.level}">
-      <span class="flag-icon">${f.level==='red'?'▲':'●'}</span>
-      <span>${esc(f.text)}</span>
-    </div>`).join('');
-
-  const total = (p.tasks||[]).length;
-  const done = (p.tasks||[]).filter(t=>t.done).length;
-  const pct = total ? Math.round(done/total*100) : 0;
-
-  const taskHTML = (p.tasks||[]).map((t,i)=>{
-    const d = daysUntil(t.due);
-    const urgentCls = (!t.done && d!==null && d<=1) ? ' urgent' : '';
-    return `<div class="cl-item" onclick="toggleTask('${p.id}','${t.id}')">
-      <input type="checkbox" ${t.done?'checked':''} onclick="event.stopPropagation();toggleTask('${p.id}','${t.id}')">
-      <span class="cl-text ${t.done?'done':''}">${esc(t.text)}</span>
-      <div class="cl-who">
-        ${t.who?`<span class="cl-assignee">${esc(t.who)}</span>`:''}
-        ${t.due?`<span class="cl-due${urgentCls}">${fmtDate(t.due)}</span>`:''}
-      </div>
-    </div>`;
-  }).join('');
-
-  const noteNote = p.note ? `<div style="font-size:12px;color:var(--text2);margin-top:4px">${esc(p.note)}</div>` : '';
-
+// single card
+function renderSingle(){
+  const el=document.getElementById('cards-single');
+  const list=projects.filter(p=>p.kind==='single'&&!p.done);
+  if(!list.length){el.innerHTML='<div class="empty">Không có tập lẻ nào đang chạy</div>';return;}
+  el.innerHTML=list.map(singleHTML).join('');
+}
+function singleHTML(p){
+  const d=D(p.airDate),cn=cdCls(d);
+  const tb=p.type==='organic'?'<span class="badge organic">Organic</span>':'<span class="badge sponsor">Sponsored</span>';
+  const lb=`<span class="badge lang">${p.lang==='eng'?'Tiếng Anh':'Tiếng Việt'}</span>`;
+  const bb=p.brand?`<span class="badge sponsor">${esc(p.brand)}</span>`:'';
+  const msH=(p.milestones||[]).map(msRowH).join('');
+  const flH=(p.flags||[]).map(flagH).join('');
+  const tot=(p.tasks||[]).length,dn=(p.tasks||[]).filter(t=>t.done).length,pct=tot?Math.round(dn/tot*100):0;
+  const tkH=(p.tasks||[]).map(t=>clItemH(t,p.id,null)).join('');
   return `<div class="card" id="card-${p.id}">
-    <div class="card-header">
+    <div class="card-hd">
       <div class="card-main">
         <div class="card-title">${esc(p.name)}</div>
-        <div class="badges">${typeBadge}${langBadge}${brandBadge}</div>
-        <div class="card-meta">Host: ${esc(p.host||'—')} · Guest: ${esc(p.guest||'TBD')} · Quay: ${fmtDate(p.shootDate)}</div>
-        ${noteNote}
+        <div class="badges">${tb}${lb}${bb}</div>
+        <div class="card-meta">Host: ${esc(p.host||'—')} · Quay: ${F(p.shootDate)}</div>
+        ${p.note?`<div class="card-note">${esc(p.note)}</div>`:''}
       </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
-        <div class="card-actions">
-          <button class="icon-btn" onclick="openEditModal('${p.id}')">✎ Sửa</button>
+      <div class="card-right">
+        <div class="card-acts">
+          <button class="act-btn" onclick="openEdit('${p.id}')">✎ Sửa</button>
+          <button class="done-btn" onclick="markDone('${p.id}')">✓ Done</button>
         </div>
-        <div class="card-countdown">
-          <div class="countdown-num ${cn}">${days===null?'—':days}</div>
-          <div class="countdown-label">ngày đến air</div>
-          <div class="air-date">${fmtDate(p.airDate)} · 12h00</div>
-        </div>
+        <div><div class="cd-num ${cn}">${d===null?'—':d}</div><div class="cd-lbl">ngày đến air</div><div class="cd-date">${F(p.airDate)} · 12h00</div></div>
       </div>
     </div>
-    ${msHTML ? `<div class="card-divider"></div><div class="card-section"><div class="section-label">Milestones</div><div class="milestones">${msHTML}</div></div>` : ''}
-    ${flagsHTML ? `<div class="card-divider"></div><div class="card-section"><div class="flags">${flagsHTML}</div></div>` : ''}
-    ${total ? `<button class="checklist-toggle" onclick="toggleChecklist('${p.id}')">
-      <span>Checklist PM — ${done}/${total} hoàn thành</span>
-      <div class="cl-progress">
-        <div class="progress-bar"><div class="progress-fill" id="pb-${p.id}" style="width:${pct}%"></div></div>
-        <span id="cl-arrow-${p.id}" style="font-size:10px;color:var(--text2)">▶</span>
-      </div>
-    </button>
-    <div class="checklist-body" id="cl-${p.id}">
-      <div class="task-list">${taskHTML}</div>
-    </div>` : ''}
+    ${msH?`<div class="divider"></div><div class="card-sec"><div class="sec-lbl">Milestones</div><div class="ms-list">${msH}</div></div>`:''}
+    ${flH?`<div class="divider"></div><div class="card-sec"><div class="flags">${flH}</div></div>`:''}
+    ${tot?`<button class="cl-toggle" onclick="toggleCl('s${p.id}')"><span>Checklist PM — ${dn}/${tot} hoàn thành</span><div class="cl-prog"><div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div><span id="arr-s${p.id}" style="font-size:9px">▶</span></div></button>
+    <div class="cl-body" id="cl-s${p.id}">${tkH}</div>`:''}
   </div>`;
 }
 
-function renderGlobalChecklist(){
-  const el = document.getElementById('global-checklist');
-  const allTasks = [];
-  projects.forEach(p=>{
-    (p.tasks||[]).forEach(t=>{
-      allTasks.push({...t, projectName: p.name, projectId: p.id});
-    });
+// series card
+function renderSeries(){
+  const el=document.getElementById('cards-series');
+  const list=projects.filter(p=>p.kind==='series'&&!p.done);
+  if(!list.length){el.innerHTML='<div class="empty">Không có series nào đang chạy</div>';return;}
+  el.innerHTML=list.map(seriesHTML).join('');
+}
+function seriesHTML(p){
+  const eps=p.episodes||[];
+  const actEps=eps.filter(e=>!e.done);
+  const doneEps=eps.filter(e=>e.done).length;
+  const nextDs=actEps.map(e=>D(e.airDate)).filter(d=>d!==null&&d>=0);
+  const dMin=nextDs.length?Math.min(...nextDs):null;
+  const cn=cdCls(dMin);
+  const lb=`<span class="badge lang">${p.lang==='eng'?'Tiếng Anh':'Tiếng Việt'}</span>`;
+  const bb=p.brand?`<span class="badge sponsor">${esc(p.brand)}</span>`:'';
+  const flH=(p.flags||[]).map(flagH).join('');
+  const tot=(p.tasks||[]).length,tn=(p.tasks||[]).filter(t=>t.done).length,pct=tot?Math.round(tn/tot*100):0;
+  const tkH=(p.tasks||[]).map(t=>clItemH(t,p.id,null)).join('');
+  const epsH=eps.map(e=>{
+    const ed=D(e.airDate);
+    const ecls=ed!==null&&ed<=3?'urgent':ed!==null&&ed<=10?'soon':'ok';
+    const dayTag=ed!==null&&ed>=0&&ed<=10?`<span class="ms-tag soon">${ed}d</span>`:'';
+    const epMsH=(e.milestones||[]).map(msRowH).join('');
+    const epTkH=(e.tasks||[]).map(t=>`
+      <div class="ep-task" onclick="toggleEpTask('${p.id}','${e.id}','${t.id}')">
+        <input type="checkbox" ${t.done?'checked':''} onclick="event.stopPropagation();toggleEpTask('${p.id}','${e.id}','${t.id}')">
+        <span class="ep-task-txt ${t.done?'done':''}">${esc(t.text)}</span>
+        <span class="ep-task-due${!t.done&&t.due&&D(t.due)<=0?' urgent':''}">${F(t.due)}</span>
+      </div>`).join('');
+    const guestLabel=e.guest&&e.guest!=='TBD'?e.guest:'TBD';
+    return `<div class="ep-row ${e.done?'ep-done':''}" id="ep-${p.id}-${e.id}">
+      <div class="ep-hd" onclick="toggleEp('${p.id}','${e.id}')">
+        <span class="ep-num">Tập ${e.ep}</span>
+        <span class="ep-title">${esc(guestLabel)}</span>
+        ${e.shootDate?`<span class="ep-meta">Quay ${F(e.shootDate)}</span>`:''}
+        <span class="ep-air-tag ${ecls}">Air ${F(e.airDate)}</span>
+        ${dayTag}
+        <button class="ep-done-btn ${e.done?'ep-done-active':''}" onclick="event.stopPropagation();toggleEpDone('${p.id}','${e.id}')">${e.done?'↩':'✓'}</button>
+        <span class="ep-arr" id="ep-arr-${p.id}-${e.id}">▶</span>
+      </div>
+      <div class="ep-body" id="ep-body-${p.id}-${e.id}">
+        ${epMsH?`<div class="ep-sec-lbl">Milestones</div><div class="ep-ms">${epMsH}</div>`:''}
+        ${epTkH?`<div class="ep-sec-lbl" style="margin-top:${epMsH?'6px':'0'}">Tasks</div><div class="ep-tasks">${epTkH}</div>`:''}
+        ${!epMsH&&!epTkH?'<div style="font-size:12px;color:var(--text3)">Chưa có data — sửa dự án để thêm</div>':''}
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="card" id="card-${p.id}">
+    <div class="card-hd">
+      <div class="card-main">
+        <div class="card-title"><span class="badge series-b">Series</span> ${esc(p.name)}</div>
+        <div class="badges">${lb}${bb}</div>
+        <div class="card-meta">Host: ${esc(p.host||'—')} · ${doneEps}/${eps.length} tập hoàn thành</div>
+        ${p.note?`<div class="card-note">${esc(p.note)}</div>`:''}
+      </div>
+      <div class="card-right">
+        <div class="card-acts">
+          <button class="act-btn" onclick="openEdit('${p.id}')">✎ Sửa</button>
+          <button class="done-btn" onclick="markDone('${p.id}')">✓ Done</button>
+        </div>
+        <div><div class="cd-num ${cn}">${dMin===null?'—':dMin}</div><div class="cd-lbl">ngày đến air</div><div class="cd-date">${actEps[0]?F(actEps[0].airDate):'—'}</div></div>
+      </div>
+    </div>
+    ${flH?`<div class="divider"></div><div class="card-sec"><div class="flags">${flH}</div></div>`:''}
+    <div class="divider"></div>
+    <div class="series-eps" style="padding-top:10px">
+      <div class="sec-lbl" style="padding:0 0 8px">Tiến độ từng tập</div>
+      ${epsH||'<div style="font-size:12px;color:var(--text3);padding-bottom:8px">Chưa có tập nào</div>'}
+    </div>
+    ${tot?`<div class="divider"></div><button class="cl-toggle" onclick="toggleCl('r${p.id}')"><span>Checklist series — ${tn}/${tot}</span><div class="cl-prog"><div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div><span id="arr-r${p.id}" style="font-size:9px">▶</span></div></button>
+    <div class="cl-body" id="cl-r${p.id}">${tkH}</div>`:''}
+  </div>`;
+}
+
+// shared HTML builders
+function msRowH(m){
+  const d=D(m.date);
+  return `<div class="ms-row">
+    <span class="ms-date">${F(m.date)}</span><span class="ms-dot ${m.status}"></span>
+    <span class="ms-text">${esc(m.text)}</span>
+    ${m.brand?'<span class="ms-tag brand">Client</span>':''}
+    ${d!==null&&d>=0&&d<=3&&m.status!=='done'?`<span class="ms-tag soon">${d}d</span>`:''}
+  </div>`;
+}
+function flagH(f){return`<div class="flag ${f.level}"><span class="flag-ico">${f.level==='red'?'▲':'●'}</span><span>${esc(f.text)}</span></div>`;}
+function clItemH(t,pid,eid){
+  const ud=!t.done&&t.due&&D(t.due)<=0;
+  const fn=eid?`toggleEpTask('${pid}','${eid}','${t.id}')`:`toggleTask('${pid}','${t.id}')`;
+  return `<div class="cl-item" onclick="${fn}">
+    <input type="checkbox" ${t.done?'checked':''} onclick="event.stopPropagation();${fn}">
+    <span class="cl-txt ${t.done?'done':''}">${esc(t.text)}</span>
+    <div class="cl-right">${t.who?`<span class="cl-who">${esc(t.who)}</span>`:''}${t.due?`<span class="cl-due${ud?' urgent':''}">${F(t.due)}</span>`:''}</div>
+  </div>`;
+}
+
+// checklist view
+function renderChecklist(){
+  const q=(document.getElementById('cl-search')?.value||'').toLowerCase();
+  const el=document.getElementById('gcl');
+  let all=[];
+  projects.filter(p=>!p.done).forEach(p=>{
+    (p.tasks||[]).forEach(t=>all.push({...t,proj:p.name,pid:p.id,eid:null}));
+    (p.episodes||[]).filter(e=>!e.done).forEach(e=>(e.tasks||[]).forEach(t=>all.push({...t,proj:`${p.name} — Tập ${e.ep}`,pid:p.id,eid:e.id})));
   });
-  allTasks.sort((a,b)=>{
-    if(!a.due) return 1; if(!b.due) return -1;
-    return new Date(a.due)-new Date(b.due);
-  });
-  if(!allTasks.length){el.innerHTML='<div class="empty">Chưa có task nào</div>';return;}
-  
-  const groups = {};
-  allTasks.forEach(t=>{
-    const d = daysUntil(t.due);
-    const key = d===null?'later':d<0?'overdue':d===0?'today':d<=3?'this_week':'later';
-    if(!groups[key]) groups[key]=[];
-    groups[key].push(t);
-  });
-  const labels = {overdue:'⚠ Quá hạn', today:'Hôm nay', this_week:'3 ngày tới', later:'Sau đó'};
-  el.innerHTML = Object.entries(labels).filter(([k])=>groups[k]?.length).map(([k,lab])=>`
-    <div style="margin-bottom:20px">
-      <div class="section-label" style="margin-bottom:10px">${lab} (${groups[k].length})</div>
-      <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden">
-        ${groups[k].map(t=>`
-          <div class="cl-item" style="padding:8px 14px;border-bottom:0.5px solid var(--border)" onclick="toggleTask('${t.projectId}','${t.id}')">
-            <input type="checkbox" ${t.done?'checked':''} onclick="event.stopPropagation();toggleTask('${t.projectId}','${t.id}')">
-            <div style="flex:1;min-width:0">
-              <span class="cl-text ${t.done?'done':''}">${esc(t.text)}</span>
-              <div style="font-size:11px;color:var(--text3);margin-top:1px">${esc(t.projectName)}</div>
-            </div>
-            <div class="cl-who">
-              ${t.who?`<span class="cl-assignee">${esc(t.who)}</span>`:''}
-              ${t.due?`<span class="cl-due ${k==='overdue'||k==='today'?'urgent':''}">${fmtDate(t.due)}</span>`:''}
-            </div>
-          </div>`).join('')}
+  if(q)all=all.filter(t=>t.text.toLowerCase().includes(q)||t.proj.toLowerCase().includes(q));
+  all.sort((a,b)=>!a.due?1:!b.due?-1:new Date(a.due)-new Date(b.due));
+  const G={overdue:[],today:[],week:[],later:[]};
+  all.forEach(t=>{const d=D(t.due);if(d===null||d>7)G.later.push(t);else if(d<0)G.overdue.push(t);else if(d===0)G.today.push(t);else G.week.push(t);});
+  if(!all.length){el.innerHTML='<div class="empty">Không có task nào</div>';return;}
+  const LBL={overdue:'⚠ Quá hạn',today:'Hôm nay',week:'7 ngày tới',later:'Sau đó'};
+  el.innerHTML=Object.entries(LBL).filter(([k])=>G[k].length).map(([k,lb])=>`
+    <div class="gcl-group">
+      <div class="gcl-group-lbl">${lb} · ${G[k].length}</div>
+      <div class="gcl-list">${G[k].map(t=>{
+        const ud=k==='overdue'||k==='today';
+        const fn=t.eid?`toggleEpTask('${t.pid}','${t.eid}','${t.id}')`:`toggleTask('${t.pid}','${t.id}')`;
+        return`<div class="gcl-item" onclick="${fn}">
+          <input type="checkbox" ${t.done?'checked':''} onclick="event.stopPropagation();${fn}">
+          <div class="gcl-main"><div class="gcl-txt ${t.done?'done':''}">${esc(t.text)}</div><div class="gcl-sub">${esc(t.proj)}</div></div>
+          <div class="cl-right">${t.who?`<span class="cl-who">${esc(t.who)}</span>`:''}${t.due?`<span class="cl-due${ud?' urgent':''}">${F(t.due)}</span>`:''}</div>
+        </div>`;}).join('')}
       </div>
     </div>`).join('');
 }
 
-// ── Interactions ──────────────────────────────────────────────────
-function toggleChecklist(id){
-  const body = document.getElementById('cl-'+id);
-  const arrow = document.getElementById('cl-arrow-'+id);
-  const open = body.style.display==='block';
-  body.style.display = open?'none':'block';
-  arrow.textContent = open?'▶':'▼';
+// archive
+function renderArchive(){
+  const q=(document.getElementById('arch-search')?.value||'').toLowerCase();
+  const el=document.getElementById('arch-list');
+  let list=projects.filter(p=>p.done);
+  if(q)list=list.filter(p=>p.name.toLowerCase().includes(q));
+  if(!list.length){el.innerHTML='<div class="empty">Chưa có dự án nào được đánh dấu hoàn thành</div>';return;}
+  el.innerHTML=`<div class="cards">${list.map(p=>`
+    <div class="card archived">
+      <div class="card-hd">
+        <div class="card-main">
+          <div class="card-title"><span class="title-strike">${esc(p.name)}</span><span class="badge done-b">Done</span></div>
+          <div class="card-meta">${p.kind==='series'?'Series':'Tập lẻ'} · Air: ${F(p.airDate)} · ${p.note||''}</div>
+        </div>
+        <div class="card-right">
+          <div class="card-acts">
+            <button class="done-btn active-done" onclick="markDone('${p.id}')">↩ Khôi phục</button>
+            <button class="act-btn" style="color:var(--red);border-color:var(--redborder)" onclick="hardDel('${p.id}')">Xóa hẳn</button>
+          </div>
+        </div>
+      </div>
+    </div>`).join('')}</div>`;
 }
 
-function toggleTask(projId, taskId){
-  const p = projects.find(x=>x.id===projId);
-  if(!p) return;
-  const t = p.tasks.find(x=>x.id===taskId);
-  if(!t) return;
-  t.done = !t.done;
-  saveProjects();
-  renderAll();
-  // Re-open checklist that was open
-  setTimeout(()=>{
-    const body = document.getElementById('cl-'+projId);
-    if(body) body.style.display='block';
-    const arrow = document.getElementById('cl-arrow-'+projId);
-    if(arrow) arrow.textContent='▼';
-  }, 50);
+// interactions
+function switchTab(name,btn){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.main-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+function toggleCl(id){
+  const b=document.getElementById('cl-'+id),a=document.getElementById('arr-'+id);
+  if(!b)return;const open=b.style.display==='block';
+  b.style.display=open?'none':'block';if(a)a.textContent=open?'▶':'▼';
+}
+function toggleEp(pid,eid){
+  const b=document.getElementById(`ep-body-${pid}-${eid}`),a=document.getElementById(`ep-arr-${pid}-${eid}`);
+  if(!b)return;const open=b.style.display==='block';
+  b.style.display=open?'none':'block';if(a)a.classList.toggle('open',!open);
+}
+async function toggleTask(pid,tid){
+  const p=projects.find(x=>x.id===pid);if(!p)return;
+  const t=(p.tasks||[]).find(x=>x.id===tid);if(!t)return;
+  t.done=!t.done;await saveOne(p);if(!db)renderAll();
+}
+async function toggleEpTask(pid,eid,tid){
+  const p=projects.find(x=>x.id===pid);if(!p)return;
+  const e=(p.episodes||[]).find(x=>x.id===eid);if(!e)return;
+  const t=(e.tasks||[]).find(x=>x.id===tid);if(!t)return;
+  t.done=!t.done;await saveOne(p);if(!db)renderAll();
+}
+async function toggleEpDone(pid,eid){
+  const p=projects.find(x=>x.id===pid);if(!p)return;
+  const e=(p.episodes||[]).find(x=>x.id===eid);if(!e)return;
+  e.done=!e.done;await saveOne(p);if(!db)renderAll();
+}
+async function markDone(pid){
+  const p=projects.find(x=>x.id===pid);if(!p)return;
+  p.done=!p.done;await saveOne(p);if(!db)renderAll();
+}
+async function hardDel(pid){
+  if(!confirm('Xóa vĩnh viễn?'))return;
+  await delOne(pid);if(!db)renderAll();
 }
 
-function switchView(v){
-  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
-  document.getElementById('view-'+v).classList.add('active');
-  event.target.classList.add('active');
-}
-
-// ── Modal ─────────────────────────────────────────────────────────
-function openAddModal(){
-  tempMs=[]; tempFlags=[]; tempTasks=[];
+// modal
+function openAdd(kind){
+  tMs=[];tFlags=[];tTasks=[];tEps=[];
   document.getElementById('edit-id').value='';
-  document.getElementById('modal-title').textContent='Thêm dự án mới';
-  document.getElementById('delete-btn').style.display='none';
-  ['f-name','f-host','f-guest','f-brand','f-note'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('f-type').value='organic';
+  document.getElementById('edit-kind').value=kind;
+  document.getElementById('modal-ttl').textContent=kind==='series'?'Thêm series':'Thêm tập lẻ';
+  document.getElementById('del-btn').style.display='none';
+  ['f-name','f-host','f-brand','f-note'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('f-type').value=kind==='series'?'series':'organic';
   document.getElementById('f-lang').value='viet';
-  document.getElementById('f-shoot').value='';
-  document.getElementById('f-air').value='';
-  renderModalMs(); renderModalFlags(); renderModalTasks();
+  document.getElementById('f-shoot').value='';document.getElementById('f-air').value='';
+  document.getElementById('eps-section').style.display=kind==='series'?'block':'none';
+  document.getElementById('f-ep-count').value=5;
+  renderModalMs();renderModalFlags();renderModalTasks();
+  if(kind==='series')renderEpInputs();
   document.getElementById('modal').classList.add('open');
 }
-
-function openEditModal(id){
-  const p = projects.find(x=>x.id===id);
-  if(!p) return;
-  tempMs = JSON.parse(JSON.stringify(p.milestones||[]));
-  tempFlags = JSON.parse(JSON.stringify(p.flags||[]));
-  tempTasks = JSON.parse(JSON.stringify(p.tasks||[]));
-  document.getElementById('edit-id').value = id;
-  document.getElementById('modal-title').textContent = 'Sửa dự án';
-  document.getElementById('delete-btn').style.display='block';
-  document.getElementById('f-name').value = p.name||'';
-  document.getElementById('f-type').value = p.type||'organic';
-  document.getElementById('f-lang').value = p.lang||'viet';
-  document.getElementById('f-host').value = p.host||'';
-  document.getElementById('f-guest').value = p.guest||'';
-  document.getElementById('f-brand').value = p.brand||'';
-  document.getElementById('f-shoot').value = p.shootDate||'';
-  document.getElementById('f-air').value = p.airDate||'';
-  document.getElementById('f-note').value = p.note||'';
-  renderModalMs(); renderModalFlags(); renderModalTasks();
+function openEdit(pid){
+  const p=projects.find(x=>x.id===pid);if(!p)return;
+  tMs=JSON.parse(JSON.stringify(p.milestones||[]));
+  tFlags=JSON.parse(JSON.stringify(p.flags||[]));
+  tTasks=JSON.parse(JSON.stringify(p.tasks||[]));
+  tEps=JSON.parse(JSON.stringify(p.episodes||[]));
+  document.getElementById('edit-id').value=pid;
+  document.getElementById('edit-kind').value=p.kind||'single';
+  document.getElementById('modal-ttl').textContent='Sửa dự án';
+  document.getElementById('del-btn').style.display='block';
+  document.getElementById('f-name').value=p.name||'';
+  document.getElementById('f-type').value=p.type||'organic';
+  document.getElementById('f-lang').value=p.lang||'viet';
+  document.getElementById('f-host').value=p.host||'';
+  document.getElementById('f-brand').value=p.brand||'';
+  document.getElementById('f-shoot').value=p.shootDate||'';
+  document.getElementById('f-air').value=p.airDate||'';
+  document.getElementById('f-note').value=p.note||'';
+  document.getElementById('eps-section').style.display=p.kind==='series'?'block':'none';
+  document.getElementById('f-ep-count').value=tEps.length||5;
+  renderModalMs();renderModalFlags();renderModalTasks();renderEpInputs();
   document.getElementById('modal').classList.add('open');
 }
-
-function closeModal(){ document.getElementById('modal').classList.remove('open'); }
-
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+function onTypeChange(){
+  const v=document.getElementById('f-type').value;
+  document.getElementById('eps-section').style.display=v==='series'?'block':'none';
+}
+function renderEpInputs(){
+  const n=parseInt(document.getElementById('f-ep-count').value)||5;
+  while(tEps.length<n)tEps.push({id:uid(),ep:tEps.length+1,guest:'TBD',shootDate:'',airDate:'',done:false,milestones:[],tasks:[]});
+  tEps=tEps.slice(0,n).map((e,i)=>({...e,ep:i+1}));
+  document.getElementById('ep-inputs').innerHTML=tEps.map((e,i)=>`
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">
+      <span style="font-size:11px;color:var(--text2);min-width:42px;flex-shrink:0">Tập ${i+1}</span>
+      <input class="fi" value="${esc(e.guest||'')}" onchange="tEps[${i}].guest=this.value" placeholder="Guest" style="flex:2;padding:6px 9px;font-size:12px">
+      <input class="fi" type="date" value="${e.shootDate||''}" onchange="tEps[${i}].shootDate=this.value" style="max-width:130px;padding:6px 9px;font-size:12px">
+      <input class="fi" type="date" value="${e.airDate||''}" onchange="tEps[${i}].airDate=this.value" style="max-width:130px;padding:6px 9px;font-size:12px">
+    </div>`).join('');
+}
 function renderModalMs(){
-  document.getElementById('ms-items').innerHTML = tempMs.map((m,i)=>`
-    <div class="ms-item-row">
-      <input type="date" value="${m.date||''}" onchange="tempMs[${i}].date=this.value">
-      <input type="text" value="${esc(m.text||'')}" onchange="tempMs[${i}].text=this.value" placeholder="Milestone">
-      <select onchange="tempMs[${i}].status=this.value">
-        ${['pending','active','done','air'].map(s=>`<option value="${s}" ${m.status===s?'selected':''}>${s}</option>`).join('')}
-      </select>
-      <button onclick="tempMs.splice(${i},1);renderModalMs()">×</button>
+  document.getElementById('ms-items').innerHTML=tMs.map((m,i)=>`
+    <div class="ms-edit-row">
+      <input type="date" value="${m.date||''}" onchange="tMs[${i}].date=this.value">
+      <input type="text" value="${esc(m.text||'')}" onchange="tMs[${i}].text=this.value" placeholder="Milestone">
+      <select onchange="tMs[${i}].status=this.value">${['pending','active','done','air'].map(s=>`<option value="${s}" ${m.status===s?'selected':''}>${s}</option>`).join('')}</select>
+      <button class="rm-btn" onclick="tMs.splice(${i},1);renderModalMs()">×</button>
     </div>`).join('');
 }
-
-function addMilestone(){
-  const date = document.getElementById('ms-new-date').value;
-  const text = document.getElementById('ms-new-text').value.trim();
-  const status = document.getElementById('ms-new-status').value;
-  if(!text) return;
-  tempMs.push({date,text,status});
-  tempMs.sort((a,b)=>a.date>b.date?1:-1);
-  document.getElementById('ms-new-date').value='';
-  document.getElementById('ms-new-text').value='';
-  renderModalMs();
+function addMs(){
+  const d=document.getElementById('ms-d').value,t=document.getElementById('ms-t').value.trim(),s=document.getElementById('ms-s').value;
+  if(!t)return;tMs.push({date:d,text:t,status:s});tMs.sort((a,b)=>a.date>b.date?1:-1);
+  document.getElementById('ms-d').value='';document.getElementById('ms-t').value='';renderModalMs();
 }
-
 function renderModalFlags(){
-  document.getElementById('flags-input').innerHTML = tempFlags.map((f,i)=>`
-    <div class="flag-row">
-      <select onchange="tempFlags[${i}].level=this.value">
-        <option value="red" ${f.level==='red'?'selected':''}>🔴 Đỏ</option>
-        <option value="yellow" ${f.level==='yellow'?'selected':''}>🟡 Vàng</option>
-      </select>
-      <input value="${esc(f.text||'')}" onchange="tempFlags[${i}].text=this.value" placeholder="Nội dung cờ">
-      <button onclick="tempFlags.splice(${i},1);renderModalFlags()">×</button>
+  document.getElementById('flags-inp').innerHTML=tFlags.map((f,i)=>`
+    <div class="fi-row">
+      <select onchange="tFlags[${i}].level=this.value"><option value="red" ${f.level==='red'?'selected':''}>🔴 Đỏ</option><option value="yellow" ${f.level==='yellow'?'selected':''}>🟡 Vàng</option></select>
+      <input class="fi" value="${esc(f.text||'')}" onchange="tFlags[${i}].text=this.value" placeholder="Nội dung" style="flex:1;padding:6px 9px;font-size:12px">
+      <button class="rm-btn" onclick="tFlags.splice(${i},1);renderModalFlags()">×</button>
     </div>`).join('');
 }
-
-function addFlagInput(){
-  tempFlags.push({level:'red',text:''});
-  renderModalFlags();
-}
-
+function addFlag(){tFlags.push({level:'red',text:''});renderModalFlags();}
 function renderModalTasks(){
-  document.getElementById('tasks-input').innerHTML = tempTasks.map((t,i)=>`
-    <div class="flag-row">
-      <input value="${esc(t.text||'')}" onchange="tempTasks[${i}].text=this.value" placeholder="Task" style="flex:3">
-      <input type="date" value="${t.due||''}" onchange="tempTasks[${i}].due=this.value" style="max-width:120px">
-      <input value="${esc(t.who||'')}" onchange="tempTasks[${i}].who=this.value" placeholder="Ai" style="max-width:70px">
-      <button onclick="tempTasks.splice(${i},1);renderModalTasks()">×</button>
+  document.getElementById('tasks-inp').innerHTML=tTasks.map((t,i)=>`
+    <div class="fi-row">
+      <input class="fi" value="${esc(t.text||'')}" onchange="tTasks[${i}].text=this.value" placeholder="Task" style="flex:3;padding:6px 9px;font-size:12px">
+      <input class="fi" type="date" value="${t.due||''}" onchange="tTasks[${i}].due=this.value" style="max-width:130px;padding:6px 9px;font-size:12px">
+      <input class="fi" value="${esc(t.who||'')}" onchange="tTasks[${i}].who=this.value" placeholder="Ai" style="max-width:70px;padding:6px 9px;font-size:12px">
+      <button class="rm-btn" onclick="tTasks.splice(${i},1);renderModalTasks()">×</button>
     </div>`).join('');
 }
-
-function addTaskInput(){
-  const text = document.getElementById('task-new-text').value.trim();
-  const due = document.getElementById('task-new-due').value;
-  const who = document.getElementById('task-new-who').value.trim();
-  if(!text) return;
-  tempTasks.push({id:uid(),text,due,who,done:false});
-  document.getElementById('task-new-text').value='';
-  document.getElementById('task-new-due').value='';
-  document.getElementById('task-new-who').value='';
+function addTask(){
+  const t=document.getElementById('tn-txt').value.trim();if(!t)return;
+  tTasks.push({id:uid(),text:t,due:document.getElementById('tn-due').value,who:document.getElementById('tn-who').value.trim(),done:false});
+  document.getElementById('tn-txt').value='';document.getElementById('tn-due').value='';document.getElementById('tn-who').value='';
   renderModalTasks();
 }
-
-function saveProject(){
-  const name = document.getElementById('f-name').value.trim();
-  if(!name){ alert('Vui lòng nhập tên dự án'); return; }
-  const data = {
-    name,
-    type: document.getElementById('f-type').value,
-    lang: document.getElementById('f-lang').value,
-    host: document.getElementById('f-host').value.trim(),
-    guest: document.getElementById('f-guest').value.trim(),
-    brand: document.getElementById('f-brand').value.trim(),
-    shootDate: document.getElementById('f-shoot').value,
-    airDate: document.getElementById('f-air').value,
-    note: document.getElementById('f-note').value.trim(),
-    milestones: JSON.parse(JSON.stringify(tempMs)),
-    flags: JSON.parse(JSON.stringify(tempFlags)),
-    tasks: JSON.parse(JSON.stringify(tempTasks)),
-  };
-  const editId = document.getElementById('edit-id').value;
-  if(editId){
-    const idx = projects.findIndex(p=>p.id===editId);
-    if(idx>=0){ data.id = editId; projects[idx] = data; }
-  } else {
-    data.id = uid();
-    projects.push(data);
-  }
-  saveProjects();
-  renderAll();
-  closeModal();
+async function saveProj(){
+  const name=document.getElementById('f-name').value.trim();if(!name){alert('Nhập tên dự án');return;}
+  const kind=document.getElementById('edit-kind').value||'single';
+  const data={name,kind,type:document.getElementById('f-type').value,lang:document.getElementById('f-lang').value,
+    host:document.getElementById('f-host').value.trim(),guest:'TBD',brand:document.getElementById('f-brand').value.trim(),
+    shootDate:document.getElementById('f-shoot').value,airDate:document.getElementById('f-air').value,
+    note:document.getElementById('f-note').value.trim(),done:false,
+    milestones:JSON.parse(JSON.stringify(tMs)),flags:JSON.parse(JSON.stringify(tFlags)),tasks:JSON.parse(JSON.stringify(tTasks))};
+  if(kind==='series')data.episodes=JSON.parse(JSON.stringify(tEps));
+  const eid=document.getElementById('edit-id').value;
+  if(eid){
+    data.id=eid;const idx=projects.findIndex(p=>p.id===eid);
+    if(idx>=0){data.done=projects[idx].done;projects[idx]=data;}
+    await saveOne(data);
+  }else{data.id=uid();projects.push(data);await saveOne(data);}
+  if(!db)renderAll();closeModal();
+}
+async function deleteProj(){
+  const pid=document.getElementById('edit-id').value;if(!pid)return;
+  if(!confirm('Xóa dự án này?'))return;
+  await delOne(pid);if(!db)renderAll();closeModal();
 }
 
-function deleteProject(){
-  const id = document.getElementById('edit-id').value;
-  if(!id) return;
-  if(!confirm('Xóa dự án này?')) return;
-  projects = projects.filter(p=>p.id!==id);
-  saveProjects();
-  renderAll();
-  closeModal();
-}
-
-// ── Export / Import JSON để sync team ────────────────────────────
+// export/import
 function exportData(){
-  const blob = new Blob([JSON.stringify(projects, null, 2)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'vs_dashboard_' + new Date().toISOString().slice(0,10) + '.json';
-  a.click();
-  showSync('Đã export — gửi file này cho team để họ Import');
+  const b=new Blob([JSON.stringify(projects,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download=`vs_dashboard_${TODAY}.json`;a.click();showSync('Exported ✓');
 }
-
 function importData(e){
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    try {
-      const data = JSON.parse(ev.target.result);
-      if(!Array.isArray(data)) throw new Error();
-      projects = data;
-      saveProjects();
-      renderAll();
-      showSync('Import thành công — ' + data.length + ' dự án');
-    } catch(err){ alert('File JSON không hợp lệ'); }
-  };
-  reader.readAsText(file);
-  e.target.value = '';
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=async ev=>{
+    try{
+      let data=JSON.parse(ev.target.result);if(!Array.isArray(data))throw 0;
+      data=data.map(p=>({...p,kind:p.kind||(p.episodes?'series':'single'),done:p.done||false}));
+      projects=data;await bulkSave();if(!db)renderAll();showSync('Import OK · '+data.length+' dự án');
+    }catch{alert('File không hợp lệ');}
+  };r.readAsText(file);e.target.value='';
 }
 
-// ── Close modal on overlay click ──────────────────────────────────
-document.getElementById('modal').addEventListener('click', e=>{
-  if(e.target===document.getElementById('modal')) closeModal();
-});
-
-// ── Init ──────────────────────────────────────────────────────────
-loadProjects();
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))closeModal();});
+init();
 </script>
 </body>
 </html>
