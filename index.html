@@ -828,6 +828,74 @@ function importData(e){
   };r.readAsText(file);e.target.value='';
 }
 
+function buildEpPhases(e,p){
+  const guest=e.guest||'TBD',shoot=e.shootDate||'',air=e.airDate||'';
+  const aTime=e.airTime||'20:00',sTime=e.shootTime||'';
+  const isSpon=e.type==='sponsor'||p.type==='sponsor';
+  const brand=p.brand||'client';
+  function aD(d,n){
+    if(!d) return '';
+    try{const x=new Date(d);x.setDate(x.getDate()+n);return x.toISOString().slice(0,10);}catch(e){return '';}
+  }
+  const pre={phase:'pre',label:'① Pre-Production',items:[]};
+  if(shoot){
+    pre.items.push({date:aD(shoot,-7),text:'Gửi email invitation cho '+guest,status:'pending'});
+    pre.items.push({date:aD(shoot,-5),text:'Book team quay anh Ninh',status:'pending'});
+    pre.items.push({date:aD(shoot,-5),text:'Book makeup (chị Ngọc / Gạo Nâu)',status:'pending'});
+    if(isSpon) pre.items.push({date:aD(shoot,-5),text:'Chase '+brand+' chốt kịch bản',status:'pending'});
+    pre.items.push({date:aD(shoot,-3),text:'Gửi email chi tiết shooting cho '+guest,status:'pending'});
+    pre.items.push({date:aD(shoot,-1),text:'Confirm calltime tất cả các bên',status:'pending'});
+  } else if(air&&isSpon){
+    pre.items.push({date:aD(air,-14),text:'Chase '+brand+' chốt kịch bản',status:'pending'});
+  }
+  const sh={phase:'shoot',label:'② Shooting',items:[]};
+  if(shoot){
+    sh.items.push({date:shoot,text:'Shooting'+(sTime?' '+sTime:''),status:'pending'});
+    sh.items.push({date:shoot,text:'Chuẩn bị quà + nước uống cho '+guest,status:'pending'});
+    sh.items.push({date:aD(shoot,1),text:'Gửi ảnh BTS + lịch air cho '+guest,status:'pending'});
+  } else {
+    sh.items.push({date:'',text:'Shooting — chưa có lịch',status:'pending'});
+  }
+  const post={phase:'post',label:'③ Post Production',items:[]};
+  if(air){
+    post.items.push({date:aD(air,-6),text:'Content fullshow (Biên tập)',status:'pending'});
+    if(isSpon) post.items.push({date:aD(air,-4),text:'Review & feedback',status:'pending',brand:true});
+    post.items.push({date:aD(air,-2),text:'Clip social + Social assets',status:'pending'});
+    post.items.push({date:aD(air,-1),text:'Teaser '+aTime,status:'pending'});
+    post.items.push({date:air,text:'AIR '+aTime,status:'air'});
+  }
+  return [pre,sh,post];
+}
+
+function renderEpPhases(e,p){
+  try{
+    const phases=buildEpPhases(e,p);
+    const COLORS={'pre':'var(--blue)','shoot':'var(--yellow)','post':'var(--green)'};
+    return phases.map(function(ph){
+      if(!ph.items.length) return '';
+      const key=ph.phase;
+      const color=COLORS[key]||'var(--text2)';
+      const rows=ph.items.map(function(m){
+        const d=D(m.date);
+        return '<div class="ms-row">'
+          +'<span class="ms-date">'+F(m.date)+'</span>'
+          +'<span class="ms-dot '+(m.status||'pending')+'"></span>'
+          +'<span class="ms-text">'+esc(m.text)+'</span>'
+          +(m.brand?'<span class="ms-tag brand">Client</span>':'')
+          +(d!==null&&d>=0&&d<=3&&m.status!=='done'?'<span class="ms-tag soon">'+d+'d</span>':'')
+          +'</div>';
+      }).join('');
+      return '<div class="ep-phase">'
+        +'<div class="ep-phase-lbl" style="color:'+color+'">'+ph.label+'</div>'
+        +'<div class="ep-ms">'+rows+'</div>'
+        +'</div>';
+    }).join('');
+  }catch(err){
+    return '<div style="font-size:12px;color:var(--text3)">Chưa có data</div>';
+  }
+}
+
+
 document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))closeModal();});
 init();
 </script>
