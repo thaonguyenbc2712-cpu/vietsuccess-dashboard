@@ -120,6 +120,8 @@ body{background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line
 .ep-air-tag.urgent{color:var(--red);font-weight:500}
 .ep-air-tag.soon{color:var(--yellow)}
 .ep-air-tag.ok{color:var(--text2)}
+.ep-edit-btn{background:none;border:0.5px solid var(--border);border-radius:3px;color:var(--text3);cursor:pointer;padding:2px 7px;font-size:10px;flex-shrink:0}
+.ep-edit-btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border2)}
 .ep-done-btn{background:none;border:0.5px solid var(--border);border-radius:3px;color:var(--text3);cursor:pointer;padding:2px 7px;font-size:10px;flex-shrink:0}
 .ep-done-btn:hover{background:var(--greenbg);color:var(--green);border-color:var(--greenborder)}
 .ep-done-btn.ep-done-active{background:var(--greenbg);color:var(--green);border-color:var(--greenborder)}
@@ -537,6 +539,7 @@ function seriesHTML(p){
         ${e.shootDate?`<span class="ep-meta">Quay ${F(e.shootDate)}</span>`:''}
         <span class="ep-air-tag ${ecls}">Air ${F(e.airDate)}</span>
         ${dayTag}
+        <button class="ep-edit-btn" onclick="event.stopPropagation();openEpEdit('${p.id}','${e.id}')">✎</button>
         <button class="ep-done-btn ${e.done?'ep-done-active':''}" onclick="event.stopPropagation();toggleEpDone('${p.id}','${e.id}')">${e.done?'↩':'✓'}</button>
         <span class="ep-arr" id="ep-arr-${p.id}-${e.id}">▶</span>
       </div>
@@ -897,7 +900,171 @@ function renderEpPhases(e,p){
 
 
 document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))closeModal();});
+
+// ── Episode edit modal ────────────────────────────────────────────
+let epTempTasks = [];
+
+function openEpEdit(pid, eid){
+  const p = projects.find(x=>x.id===pid);
+  if(!p) return;
+  const e = (p.episodes||[]).find(x=>x.id===eid);
+  if(!e) return;
+  document.getElementById('ep-pid').value = pid;
+  document.getElementById('ep-eid').value = eid;
+  document.getElementById('ep-modal-ttl').textContent = p.name + ' — Tập ' + e.ep;
+  document.getElementById('ep-guest').value = e.guest||'';
+  document.getElementById('ep-type').value = e.type||'organic';
+  document.getElementById('ep-shoot-date').value = e.shootDate||'';
+  document.getElementById('ep-shoot-time').value = e.shootTime||'';
+  document.getElementById('ep-air-date').value = e.airDate||'';
+  document.getElementById('ep-air-time').value = e.airTime||'20:00';
+  // Only show custom tasks (non-auto-generated ones)
+  // Auto tasks are rebuilt from shootDate, custom ones are flagged or we just show all
+  epTempTasks = JSON.parse(JSON.stringify(e.tasks||[]));
+  renderEpTasksList();
+  updateEpPreview();
+  document.getElementById('ep-modal').classList.add('open');
+}
+
+function closeEpModal(){
+  document.getElementById('ep-modal').classList.remove('open');
+}
+
+function renderEpTasksList(){
+  document.getElementById('ep-tasks-list').innerHTML = epTempTasks.map((t,i)=>`
+    <div class="fi-row">
+      <input class="fi" value="${esc(t.text||'')}" onchange="epTempTasks[${i}].text=this.value" placeholder="Task" style="flex:3;padding:6px 9px;font-size:12px">
+      <input class="fi" type="date" value="${t.due||''}" onchange="epTempTasks[${i}].due=this.value" style="max-width:130px;padding:6px 9px;font-size:12px">
+      <input class="fi" value="${esc(t.who||'PM')}" onchange="epTempTasks[${i}].who=this.value" placeholder="Ai" style="max-width:70px;padding:6px 9px;font-size:12px">
+      <button class="rm-btn" onclick="epTempTasks.splice(${i},1);renderEpTasksList()">×</button>
+    </div>`).join('');
+}
+
+function addEpTask(){
+  const txt = document.getElementById('ep-task-txt').value.trim();
+  if(!txt) return;
+  epTempTasks.push({id:uid(), text:txt, due:document.getElementById('ep-task-due').value, who:document.getElementById('ep-task-who').value||'PM', done:false});
+  document.getElementById('ep-task-txt').value='';
+  document.getElementById('ep-task-due').value='';
+  renderEpTasksList();
+}
+
+function updateEpPreview(){
+  const shoot = document.getElementById('ep-shoot-date').value;
+  const air   = document.getElementById('ep-air-date').value;
+  const aTime = document.getElementById('ep-air-time').value;
+  const sTime = document.getElementById('ep-shoot-time').value;
+  const guest = document.getElementById('ep-guest').value||'TBD';
+  const isSpon = document.getElementById('ep-type').value==='sponsor';
+  const pid = document.getElementById('ep-pid').value;
+  const p = projects.find(x=>x.id===pid)||{};
+
+  const fakeEp = {shootDate:shoot, airDate:air, airTime:aTime, shootTime:sTime, guest, type:document.getElementById('ep-type').value};
+  const phases = buildEpPhases(fakeEp, p);
+  const prev = document.getElementById('ep-preview');
+  if(!shoot && !air){ prev.textContent='Điền ngày quay & air để xem preview'; return; }
+  prev.innerHTML = phases.map(ph=>{
+    if(!ph.items.length) return '';
+    const colorMap = {'pre':'var(--blue)','shoot':'var(--yellow)','post':'var(--green)'};
+    return `<div style="margin-bottom:8px">
+      <div style="font-size:10px;font-weight:600;color:${colorMap[ph.phase]||'var(--text2)'};text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">${ph.label}</div>
+      ${ph.items.map(m=>`<div style="font-size:11px;color:var(--text2);padding:1px 0">
+        <span style="min-width:72px;display:inline-block;color:var(--text3)">${F(m.date)}</span>${esc(m.text)}
+      </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+// Live preview listeners registered after DOM ready
+
+async function saveEpEdit(){
+  const pid = document.getElementById('ep-pid').value;
+  const eid = document.getElementById('ep-eid').value;
+  const p = projects.find(x=>x.id===pid); if(!p) return;
+  const e = (p.episodes||[]).find(x=>x.id===eid); if(!e) return;
+
+  e.guest     = document.getElementById('ep-guest').value.trim();
+  e.type      = document.getElementById('ep-type').value;
+  e.shootDate = document.getElementById('ep-shoot-date').value;
+  e.shootTime = document.getElementById('ep-shoot-time').value;
+  e.airDate   = document.getElementById('ep-air-date').value;
+  e.airTime   = document.getElementById('ep-air-time').value;
+  e.tasks     = JSON.parse(JSON.stringify(epTempTasks));
+
+  await saveOne(p);
+  if(!db) renderAll();
+  closeEpModal();
+}
+
+// ep-modal overlay close handled in init after DOM ready
+
 init();
+// Setup ep-modal close after DOM ready
+document.addEventListener('DOMContentLoaded', function(){
+  const em = document.getElementById('ep-modal');
+  if(em) em.addEventListener('click', function(e){ if(e.target===em) closeEpModal(); });
+  // Live preview listeners
+  ['ep-shoot-date','ep-air-date','ep-air-time','ep-shoot-time','ep-guest','ep-type'].forEach(function(id){
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('change', updateEpPreview);
+  });
+});
 </script>
+
+<!-- Episode Edit Modal -->
+<div class="overlay" id="ep-modal">
+<div class="modal">
+  <div class="modal-hd">
+    <div class="modal-ttl" id="ep-modal-ttl">Sửa tập</div>
+    <button class="modal-x" onclick="closeEpModal()">×</button>
+  </div>
+  <div class="modal-body">
+    <input type="hidden" id="ep-pid">
+    <input type="hidden" id="ep-eid">
+    <div class="frow">
+      <div class="fg"><label class="fl">Khách mời (Guest)</label><input class="fi" id="ep-guest" placeholder="VD: Nguyễn Hữu Trí"></div>
+      <div class="fg"><label class="fl">Loại tập</label>
+        <select class="fs" id="ep-type">
+          <option value="organic">Organic</option>
+          <option value="sponsor">Sponsored</option>
+        </select>
+      </div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Ngày quay</label><input class="fi" type="date" id="ep-shoot-date"></div>
+      <div class="fg"><label class="fl">Giờ quay</label><input class="fi" type="text" id="ep-shoot-time" placeholder="VD: 9:00 – 11:00AM"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Ngày air</label><input class="fi" type="date" id="ep-air-date"></div>
+      <div class="fg"><label class="fl">Giờ air</label>
+        <select class="fs" id="ep-air-time">
+          <option value="06:00">06:00 sáng</option>
+          <option value="12:00">12:00 trưa</option>
+          <option value="19:00">19:00 tối</option>
+          <option value="20:00">20:00 tối</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Tasks PM bổ sung <span style="color:var(--text3);font-weight:400">(ngoài checklist tự động)</span></label>
+      <div id="ep-tasks-list"></div>
+      <div class="fi-row" style="margin-top:6px">
+        <input class="fi" id="ep-task-txt" placeholder="Task" style="flex:3;padding:6px 9px;font-size:12px">
+        <input class="fi" type="date" id="ep-task-due" style="max-width:130px;padding:6px 9px;font-size:12px">
+        <input class="fi" id="ep-task-who" placeholder="Ai" style="max-width:70px;padding:6px 9px;font-size:12px" value="PM">
+        <button class="btn ghost" onclick="addEpTask()" style="padding:6px 10px">+</button>
+      </div>
+    </div>
+    <div class="fg" style="background:var(--bg3);border-radius:var(--rs);padding:10px 12px">
+      <div class="fl" style="margin-bottom:6px">Preview — Phases tự động từ ngày trên</div>
+      <div id="ep-preview" style="font-size:12px;color:var(--text2)">Điền ngày quay & air để xem preview</div>
+    </div>
+  </div>
+  <div class="modal-ft">
+    <button class="btn ghost" onclick="closeEpModal()">Hủy</button>
+    <button class="btn primary" onclick="saveEpEdit()">Lưu tập</button>
+  </div>
+</div>
+</div>
 </body>
 </html>
