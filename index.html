@@ -600,33 +600,73 @@ function clItemH(t,pid,eid){
 }
 
 // checklist view
+
+function gclClick(el){
+  const pid=el.dataset.pid||el.closest('[data-pid]')?.dataset.pid;
+  const eid=el.dataset.eid||el.closest('[data-eid]')?.dataset.eid;
+  const tid=el.dataset.tid||el.closest('[data-tid]')?.dataset.tid;
+  if(!pid||!tid) return;
+  if(eid) toggleEpTask(pid,eid,tid);
+  else toggleTask(pid,tid);
+}
+
 function renderChecklist(){
   const q=(document.getElementById('cl-search')?.value||'').toLowerCase();
   const el=document.getElementById('gcl');
   let all=[];
   projects.filter(p=>!p.done).forEach(p=>{
-    (p.tasks||[]).forEach(t=>all.push({...t,proj:p.name,pid:p.id,eid:null}));
-    (p.episodes||[]).filter(e=>!e.done).forEach(e=>(e.tasks||[]).forEach(t=>all.push({...t,proj:`${p.name} — Tập ${e.ep}`,pid:p.id,eid:e.id})));
+    (p.tasks||[]).forEach(t=>all.push(Object.assign({},t,{proj:p.name,pid:p.id,eid:null})));
+    (p.episodes||[]).filter(e=>!e.done).forEach(e=>(e.tasks||[]).forEach(t=>all.push(Object.assign({},t,{proj:p.name+' — Tập '+e.ep,pid:p.id,eid:e.id}))));
   });
-  if(q)all=all.filter(t=>t.text.toLowerCase().includes(q)||t.proj.toLowerCase().includes(q));
+  if(q) all=all.filter(t=>t.text.toLowerCase().includes(q)||t.proj.toLowerCase().includes(q));
   all.sort((a,b)=>!a.due?1:!b.due?-1:new Date(a.due)-new Date(b.due));
-  const G={overdue:[],today:[],week:[],later:[]};
-  all.forEach(t=>{const d=D(t.due);if(d===null||d>7)G.later.push(t);else if(d<0)G.overdue.push(t);else if(d===0)G.today.push(t);else G.week.push(t);});
   if(!all.length){el.innerHTML='<div class="empty">Không có task nào</div>';return;}
-  const LBL={overdue:'⚠ Quá hạn',today:'Hôm nay',week:'7 ngày tới',later:'Sau đó'};
-  el.innerHTML=Object.entries(LBL).filter(([k])=>G[k].length).map(([k,lb])=>`
-    <div class="gcl-group">
-      <div class="gcl-group-lbl">${lb} · ${G[k].length}</div>
-      <div class="gcl-list">${G[k].map(t=>{
-        const ud=k==='overdue'||k==='today';
-        const fn=t.eid?`toggleEpTask('${t.pid}','${t.eid}','${t.id}')`:`toggleTask('${t.pid}','${t.id}')`;
-        return`<div class="gcl-item" onclick="${fn}">
-          <input type="checkbox" ${t.done?'checked':''} onclick="event.stopPropagation();${fn}">
-          <div class="gcl-main"><div class="gcl-txt ${t.done?'done':''}">${esc(t.text)}</div><div class="gcl-sub">${esc(t.proj)}</div></div>
-          <div class="cl-right">${t.who?`<span class="cl-who">${esc(t.who)}</span>`:''}${t.due?`<span class="cl-due${ud?' urgent':''}">${F(t.due)}</span>`:''}</div>
-        </div>`;}).join('')}
-      </div>
-    </div>`).join('');
+
+  // Group by exact date
+  const dayGroups={};
+  all.forEach(function(t){
+    const key=t.due||'__later';
+    if(!dayGroups[key]) dayGroups[key]=[];
+    dayGroups[key].push(t);
+  });
+
+  // Sort keys: overdue first, then by date, then later
+  const todayStr=TODAY;
+  const sortedKeys=Object.keys(dayGroups).sort(function(a,b){
+    if(a==='__later') return 1;
+    if(b==='__later') return -1;
+    return a<b?-1:a>b?1:0;
+  });
+
+  function dayLabel(dateStr){
+    if(!dateStr||dateStr==='__later') return 'Sau đó';
+    const d=D(dateStr);
+    if(d<0) return '⚠ Quá hạn · '+F(dateStr);
+    if(d===0) return 'Hôm nay · '+F(dateStr);
+    if(d===1) return 'Ngày mai · '+F(dateStr);
+    if(d<=7) return d+' ngày nữa · '+F(dateStr);
+    return F(dateStr);
+  }
+
+  el.innerHTML=sortedKeys.map(function(k){
+    const tasks=dayGroups[k];
+    const label=dayLabel(k);
+    const isUrgent=k!=='__later'&&D(k)!==null&&D(k)<=1;
+    const rows=tasks.map(function(t){
+      const dpid='data-pid="'+t.pid+'"', deid=t.eid?'data-eid="'+t.eid+'"':'', dtid='data-tid="'+t.id+'"';
+      return '<div class="gcl-item" '+dpid+' '+deid+' '+dtid+' onclick="gclClick(this)">'
+        +'<input type="checkbox"'+(t.done?' checked':'')+' '+dpid+' '+deid+' '+dtid+' onclick="event.stopPropagation();gclClick(this)">'
+        +'<div class="gcl-main"><div class="gcl-txt'+(t.done?' done':'')+'">'+esc(t.text)+'</div>'
+        +'<div class="gcl-sub">'+esc(t.proj)+'</div></div>'
+        +'<div class="cl-right">'+(t.who?'<span class="cl-who">'+esc(t.who)+'</span>':'')
+        +(t.due&&k!=='__later'?'<span class="cl-due'+(isUrgent?' urgent':'')+'">'+F(t.due)+'</span>':'')
+        +'</div></div>';
+    }).join('');
+    return '<div class="gcl-group">'
+      +'<div class="gcl-group-lbl">'+label+' · '+tasks.length+'</div>'
+      +'<div class="gcl-list">'+rows+'</div>'
+      +'</div>';
+  }).join('');
 }
 
 // archive
@@ -1154,344 +1194,5 @@ document.addEventListener('DOMContentLoaded', function(){
     <button class="btn primary" onclick="saveEpEdit()">Lưu tập</button>
   </div>
 </div>
-</div>ml>
-<html lang="vi">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vietsuccess — Dashboard</title>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#0d0d0d;--bg2:#161616;--bg3:#1e1e1e;--bg4:#252525;
-  --border:#2a2a2a;--border2:#363636;
-  --text:#f0f0f0;--text2:#888;--text3:#444;
-  --red:#e05555;--redbg:#1c0f0f;--redborder:#3a1818;
-  --yellow:#c99a35;--yellowbg:#1a1608;--yellowborder:#2e2510;
-  --green:#4aaf78;--greenbg:#0c1a12;--greenborder:#183325;
-  --blue:#4a9edd;--bluebg:#0c1520;--blueborder:#182a3a;
-  --accent:#e05555;
-  --r:10px;--rs:6px;
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-}
-body{background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
-.app{max-width:960px;margin:0 auto;padding:20px 16px 80px}
-.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
-.logo{display:flex;align-items:center;gap:10px}
-.logo-v{width:30px;height:30px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;flex-shrink:0}
-.logo-name{font-size:15px;font-weight:600}
-.logo-sub{font-size:11px;color:var(--text2);margin-top:1px}
-.topbar-right{display:flex;align-items:center;gap:8px}
-.today-info{text-align:right;margin-right:4px}
-.today-date{font-size:13px;font-weight:500;color:var(--text)}
-.today-sub{font-size:11px;color:var(--text2)}
-.icon-btn{background:none;border:0.5px solid var(--border2);border-radius:var(--rs);color:var(--text2);cursor:pointer;padding:6px 11px;font-size:12px;transition:all .15s;white-space:nowrap}
-.icon-btn:hover{background:var(--bg3);color:var(--text)}
-.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:18px}
-.metric{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--rs);padding:12px 14px}
-.metric-lbl{font-size:11px;color:var(--text2);margin-bottom:5px}
-.metric-val{font-size:22px;font-weight:600;line-height:1}
-.metric-val.red{color:var(--red)}
-.metric-val.yellow{color:var(--yellow)}
-.metric-val.green{color:var(--green)}
-.main-tabs{display:flex;gap:2px;margin-bottom:16px;background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--rs);padding:3px;width:fit-content}
-.main-tab{padding:6px 16px;border-radius:4px;font-size:13px;cursor:pointer;color:var(--text2);border:none;background:none;transition:all .15s;position:relative}
-.main-tab.active{background:var(--bg4);color:var(--text);font-weight:500}
-.tab-badge{display:inline-block;font-size:9px;background:var(--accent);color:#fff;border-radius:8px;padding:1px 5px;margin-left:4px;min-width:16px;text-align:center;vertical-align:middle}
-.tab-badge.gray{background:var(--text3)}
-.view{display:none}.view.active{display:block}
-.cards{display:flex;flex-direction:column;gap:11px}
-.card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .2s}
-.card:hover{border-color:var(--border2)}
-.card.archived{opacity:.4;border-style:dashed}
-.card-hd{display:flex;align-items:flex-start;gap:12px;padding:14px 16px 12px}
-.card-main{flex:1;min-width:0}
-.card-title{font-size:15px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.title-strike{text-decoration:line-through;color:var(--text2)}
-.badges{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px}
-.badge{font-size:10px;padding:2px 7px;border-radius:3px;font-weight:600}
-.badge.organic{background:#0c1e14;color:#4aaf78;border:0.5px solid #183325}
-.badge.sponsor{background:var(--bluebg);color:var(--blue);border:0.5px solid var(--blueborder)}
-.badge.series-b{background:var(--yellowbg);color:var(--yellow);border:0.5px solid var(--yellowborder)}
-.badge.lang{background:var(--bg3);color:var(--text2);border:0.5px solid var(--border)}
-.badge.done-b{background:var(--greenbg);color:var(--green);border:0.5px solid var(--greenborder)}
-.card-meta{font-size:12px;color:var(--text2)}
-.card-note{font-size:11px;color:var(--text3);margin-top:3px}
-.card-right{display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex-shrink:0}
-.cd-num{font-size:28px;font-weight:700;line-height:1;letter-spacing:-1px;text-align:right}
-.cd-num.red{color:var(--red)}.cd-num.yellow{color:var(--yellow)}.cd-num.green{color:var(--green)}.cd-num.gray{color:var(--text3)}
-.cd-lbl{font-size:10px;color:var(--text2);margin-top:2px;text-align:right}
-.cd-date{font-size:11px;color:var(--text3);text-align:right}
-.card-acts{display:flex;gap:5px}
-.act-btn{background:none;border:0.5px solid var(--border2);border-radius:var(--rs);color:var(--text2);cursor:pointer;padding:5px 10px;font-size:11px;transition:all .15s;white-space:nowrap}
-.act-btn:hover{background:var(--bg3);color:var(--text)}
-.done-btn{background:none;border:0.5px solid var(--border2);border-radius:var(--rs);color:var(--text2);cursor:pointer;padding:5px 10px;font-size:11px;transition:all .15s}
-.done-btn:hover{background:var(--greenbg);color:var(--green);border-color:var(--greenborder)}
-.done-btn.active-done{background:var(--greenbg);color:var(--green);border-color:var(--greenborder)}
-.done-btn.active-done:hover{background:var(--redbg);color:var(--red);border-color:var(--redborder)}
-.divider{height:0.5px;background:var(--border);margin:0 16px}
-.card-sec{padding:10px 16px}
-.sec-lbl{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px}
-.ms-list{display:flex;flex-direction:column;gap:6px}
-.ms-row{display:flex;align-items:center;gap:9px}
-.ms-date{font-size:11px;color:var(--text2);min-width:62px;font-variant-numeric:tabular-nums}
-.ms-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.ms-dot.done{background:var(--green)}.ms-dot.active{background:var(--yellow)}.ms-dot.pending{background:var(--border2)}.ms-dot.air{background:var(--red)}
-.ms-text{font-size:13px;color:var(--text);flex:1}
-.ms-tag{font-size:10px;padding:1px 6px;border-radius:3px}
-.ms-tag.brand{background:var(--redbg);color:var(--red);border:0.5px solid var(--redborder)}
-.ms-tag.soon{background:var(--yellowbg);color:var(--yellow);border:0.5px solid var(--yellowborder)}
-.flags{display:flex;flex-direction:column;gap:5px}
-.flag{display:flex;align-items:flex-start;gap:7px;padding:7px 9px;border-radius:var(--rs);font-size:12px;line-height:1.4}
-.flag.red{background:var(--redbg);color:var(--red);border:0.5px solid var(--redborder)}
-.flag.yellow{background:var(--yellowbg);color:var(--yellow);border:0.5px solid var(--yellowborder)}
-.flag-ico{font-size:12px;flex-shrink:0;margin-top:1px}
-.cl-toggle{width:100%;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:9px 16px;color:var(--text2);font-size:12px;border-top:0.5px solid var(--border)}
-.cl-toggle:hover{background:var(--bg3)}
-.cl-prog{display:flex;align-items:center;gap:8px}
-.prog-bar{width:70px;height:3px;background:var(--bg4);border-radius:2px;overflow:hidden}
-.prog-fill{height:100%;background:var(--green);border-radius:2px;transition:width .3s}
-.cl-body{padding:4px 16px 12px;display:none}
-.cl-item{display:flex;align-items:center;gap:9px;padding:5px 0;border-bottom:0.5px solid var(--border);cursor:pointer}
-.cl-item:last-child{border-bottom:none}
-.cl-item input{accent-color:var(--green);width:13px;height:13px;cursor:pointer;flex-shrink:0}
-.cl-txt{font-size:13px;color:var(--text);flex:1}
-.cl-txt.done{text-decoration:line-through;color:var(--text3)}
-.cl-right{display:flex;gap:5px;align-items:center;flex-shrink:0}
-.cl-who{font-size:10px;padding:1px 6px;border-radius:3px;background:var(--bg4);color:var(--text2);border:0.5px solid var(--border)}
-.cl-due{font-size:11px;color:var(--text2)}
-.cl-due.urgent{color:var(--red);font-weight:500}
-/* Series episodes */
-.series-eps{padding:0 16px 10px}
-.ep-row{border:0.5px solid var(--border);border-radius:var(--rs);margin-bottom:5px;overflow:hidden}
-.ep-row.ep-done{opacity:.38;border-style:dashed}
-.ep-hd{display:flex;align-items:center;gap:9px;padding:8px 11px;cursor:pointer;background:var(--bg3);user-select:none}
-.ep-hd:hover{background:var(--bg4)}
-.ep-num{font-size:11px;font-weight:600;color:var(--text2);min-width:38px;flex-shrink:0}
-.ep-title{font-size:13px;font-weight:500;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ep-meta{font-size:10px;color:var(--text3);flex-shrink:0}
-.ep-air-tag{font-size:11px;flex-shrink:0}
-.ep-air-tag.urgent{color:var(--red);font-weight:500}
-.ep-air-tag.soon{color:var(--yellow)}
-.ep-air-tag.ok{color:var(--text2)}
-.ep-edit-btn{background:none;border:0.5px solid var(--border);border-radius:3px;color:var(--text3);cursor:pointer;padding:2px 7px;font-size:10px;flex-shrink:0}
-.ep-edit-btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border2)}
-.ep-done-btn{background:none;border:0.5px solid var(--border);border-radius:3px;color:var(--text3);cursor:pointer;padding:2px 7px;font-size:10px;flex-shrink:0}
-.ep-done-btn:hover{background:var(--greenbg);color:var(--green);border-color:var(--greenborder)}
-.ep-done-btn.ep-done-active{background:var(--greenbg);color:var(--green);border-color:var(--greenborder)}
-.ep-done-btn.ep-done-active:hover{background:var(--redbg);color:var(--red);border-color:var(--redborder)}
-.ep-arr{font-size:9px;color:var(--text3);flex-shrink:0;transition:transform .18s}
-.ep-arr.open{transform:rotate(90deg)}
-.ep-type{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:600;flex-shrink:0;letter-spacing:.02em}
-.ep-type.spon{background:var(--bluebg);color:var(--blue);border:0.5px solid var(--blueborder)}
-.ep-type.org{background:#0c1e14;color:#4aaf78;border:0.5px solid #183325}
-.ep-row.ep-spon{border-left:2px solid var(--blue)}
-.series-type-label{font-size:10px;padding:2px 8px;border-radius:3px;font-weight:600}
-.series-type-label.main-ip{background:#0c1e14;color:#4aaf78;border:0.5px solid #183325}
-.series-type-label.spon-series{background:var(--bluebg);color:var(--blue);border:0.5px solid var(--blueborder)}
-.ep-body{display:none;padding:10px 12px 12px;border-top:0.5px solid var(--border);background:var(--bg2)}
-.ep-phase{margin-bottom:10px}
-.ep-phase:last-child{margin-bottom:0}
-.ep-phase-lbl{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px;padding:3px 0;border-bottom:0.5px solid var(--border)}
-.ep-sec-lbl{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
-.ep-ms{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
-.ep-tasks{display:flex;flex-direction:column;gap:3px}
-.ep-task{display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:4px 0;border-bottom:0.5px solid var(--border)}
-.ep-task:last-child{border-bottom:none}
-.ep-task input{accent-color:var(--green);width:12px;height:12px;cursor:pointer;flex-shrink:0}
-.ep-task-txt{flex:1;color:var(--text)}
-.ep-task-txt.done{text-decoration:line-through;color:var(--text3)}
-.ep-task-due{font-size:10px;color:var(--text3)}
-.ep-task-due.urgent{color:var(--red)}
-/* Add btn */
-.add-btn{display:flex;align-items:center;gap:8px;padding:11px 16px;border:0.5px dashed var(--border2);border-radius:var(--r);background:none;color:var(--text2);cursor:pointer;font-size:13px;width:100%;transition:all .15s;margin-top:4px}
-.add-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--redbg)}
-/* Checklist view */
-.gcl-group{margin-bottom:16px}
-.gcl-group-lbl{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:7px}
-.gcl-list{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden}
-.gcl-item{display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:0.5px solid var(--border);cursor:pointer}
-.gcl-item:last-child{border-bottom:none}
-.gcl-item:hover{background:var(--bg3)}
-.gcl-item input{accent-color:var(--green);width:13px;height:13px;cursor:pointer;flex-shrink:0}
-.gcl-main{flex:1;min-width:0}
-.gcl-txt{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.gcl-txt.done{text-decoration:line-through;color:var(--text3)}
-.gcl-sub{font-size:11px;color:var(--text3);margin-top:1px}
-/* Archive */
-.arch-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.arch-title{font-size:14px;font-weight:600;color:var(--text2)}
-.arch-sub{font-size:12px;color:var(--text3)}
-/* Search */
-.search-wrap{margin-bottom:12px}
-.search-inp{width:100%;background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--rs);color:var(--text);font-size:13px;padding:8px 12px;outline:none}
-.search-inp:focus{border-color:var(--text3)}
-/* Modal */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}
-.overlay.open{display:flex}
-.modal{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--r);width:100%;max-width:540px;max-height:92vh;overflow-y:auto}
-.modal-hd{padding:15px 18px 12px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.modal-ttl{font-size:15px;font-weight:600}
-.modal-x{background:none;border:none;color:var(--text2);cursor:pointer;font-size:20px;line-height:1;padding:2px 6px}
-.modal-x:hover{color:var(--text)}
-.modal-body{padding:16px 18px}
-.fg{margin-bottom:13px}
-.fl{font-size:12px;color:var(--text2);margin-bottom:5px;display:block;font-weight:500}
-.fi,.fs,.ft{width:100%;background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--rs);color:var(--text);font-size:13px;padding:8px 11px;outline:none;font-family:inherit}
-.fi:focus,.fs:focus,.ft:focus{border-color:var(--accent)}
-.ft{resize:vertical;min-height:65px}
-.fs option{background:var(--bg2)}
-.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.modal-ft{padding:11px 18px;border-top:0.5px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
-.btn{padding:7px 16px;border-radius:var(--rs);font-size:13px;cursor:pointer;border:0.5px solid var(--border2);font-weight:500;transition:all .15s}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{opacity:.85}
-.btn.ghost{background:none;color:var(--text2)}.btn.ghost:hover{background:var(--bg3);color:var(--text)}
-.btn.danger{background:var(--redbg);border-color:var(--redborder);color:var(--red)}
-.fi-row{display:flex;gap:6px;align-items:center;margin-bottom:5px}
-.fi-row .fi{padding:6px 9px;font-size:12px}
-.fi-row select{background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--rs);padding:6px 8px;font-size:12px;outline:none;flex-shrink:0}
-.rm-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 5px;flex-shrink:0}
-.rm-btn:hover{color:var(--red)}
-.add-sub{background:none;border:0.5px dashed var(--border2);border-radius:var(--rs);color:var(--text2);cursor:pointer;font-size:12px;padding:5px 11px;margin-top:4px}
-.add-sub:hover{border-color:var(--text3);color:var(--text)}
-.ms-edit-row{display:flex;gap:5px;align-items:center;margin-bottom:4px}
-.ms-edit-row input,.ms-edit-row select{background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--rs);padding:5px 8px;font-size:12px;outline:none}
-.ms-edit-row input[type=text]{flex:1}.ms-edit-row input[type=date]{max-width:130px}
-.ms-edit-row select{background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--rs);padding:5px 7px;font-size:12px;outline:none}
-/* Sync */
-.sync-bar{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--bg3);border:0.5px solid var(--border2);border-radius:20px;padding:7px 14px;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:7px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:200}
-.sync-bar.show{opacity:1}
-.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pulse 1.5s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.empty{text-align:center;padding:36px 20px;color:var(--text3);font-size:13px}
-@media(max-width:600px){.metrics{grid-template-columns:repeat(2,1fr)}.frow{grid-template-columns:1fr}}
-</style>
-</head>
-<body>
-<div class="app">
-  <div class="topbar">
-    <div class="logo">
-      <div class="logo-v">V</div>
-      <div><div class="logo-name">Vietsuccess</div><div class="logo-sub">Production Dashboard</div></div>
-    </div>
-    <div class="topbar-right">
-      <div class="today-info"><div class="today-date" id="today-str">--</div><div class="today-sub" id="active-count">--</div></div>
-      <button class="icon-btn" onclick="exportData()">↓ Export</button>
-      <label class="icon-btn" style="cursor:pointer">↑ Import<input type="file" accept=".json" onchange="importData(event)" style="display:none"></label>
-    </div>
-  </div>
-
-  <div class="metrics">
-    <div class="metric"><div class="metric-lbl">Dự án đang chạy</div><div class="metric-val" id="m-active">—</div></div>
-    <div class="metric"><div class="metric-lbl">Air gần nhất</div><div class="metric-val yellow" id="m-next">—</div></div>
-    <div class="metric"><div class="metric-lbl">Task hôm nay</div><div class="metric-val red" id="m-today">—</div></div>
-    <div class="metric"><div class="metric-lbl">Cờ đỏ</div><div class="metric-val red" id="m-flags">—</div></div>
-  </div>
-
-  <div class="main-tabs">
-    <button class="main-tab active" onclick="switchTab('single',this)">Tập lẻ <span class="tab-badge" id="b-single">0</span></button>
-    <button class="main-tab" onclick="switchTab('series',this)">Series <span class="tab-badge" id="b-series">0</span></button>
-    <button class="main-tab" onclick="switchTab('checklist',this)">Checklist</button>
-    <button class="main-tab" onclick="switchTab('archive',this)">Lưu trữ <span class="tab-badge gray" id="b-archive">0</span></button>
-  </div>
-
-  <div class="view active" id="view-single">
-    <div class="cards" id="cards-single"></div>
-    <button class="add-btn" onclick="openAdd('single')">+ Thêm tập lẻ</button>
-  </div>
-
-  <div class="view" id="view-series">
-    <div class="cards" id="cards-series"></div>
-    <button class="add-btn" onclick="openAdd('series')">+ Thêm series</button>
-  </div>
-
-  <div class="view" id="view-checklist">
-    <div class="search-wrap"><input class="search-inp" id="cl-search" placeholder="Tìm task..." oninput="renderChecklist()"></div>
-    <div id="gcl"></div>
-  </div>
-
-  <div class="view" id="view-archive">
-    <div class="arch-hd"><div class="arch-title">Đã hoàn thành</div><div class="arch-sub" id="arch-sub">0 dự án</div></div>
-    <div class="search-wrap"><input class="search-inp" id="arch-search" placeholder="Tìm..." oninput="renderArchive()"></div>
-    <div id="arch-list"></div>
-  </div>
-</div>
-
-<div class="overlay" id="modal">
-<div class="modal">
-  <div class="modal-hd"><div class="modal-ttl" id="modal-ttl">Thêm dự án</div><button class="modal-x" onclick="closeModal()">×</button></div>
-  <div class="modal-body">
-    <input type="hidden" id="edit-id"><input type="hidden" id="edit-kind">
-    <div class="fg"><label class="fl">Tên dự án *</label><input class="fi" id="f-name" placeholder="VD: The Quoc Khanh Show — Ep 124"></div>
-    <div class="frow">
-      <div class="fg"><label class="fl">Loại</label>
-        <select class="fs" id="f-type" onchange="onTypeChange()">
-          <option value="organic">Organic</option><option value="sponsor">Sponsored</option><option value="series">Series</option>
-        </select>
-      </div>
-      <div class="fg"><label class="fl">Ngôn ngữ</label>
-        <select class="fs" id="f-lang"><option value="viet">Tiếng Việt</option><option value="eng">Tiếng Anh</option></select>
-      </div>
-    </div>
-    <div class="frow">
-      <div class="fg"><label class="fl">Host</label><input class="fi" id="f-host" placeholder="Quốc Khánh"></div>
-      <div class="fg"><label class="fl">Brand / Client</label><input class="fi" id="f-brand" placeholder="Manulife Vietnam"></div>
-    </div>
-    <div class="frow">
-      <div class="fg"><label class="fl">Ngày quay</label><input class="fi" type="date" id="f-shoot"></div>
-      <div class="fg"><label class="fl">Ngày air</label><input class="fi" type="date" id="f-air"></div>
-    </div>
-    <div class="fg"><label class="fl">Ghi chú</label><textarea class="ft" id="f-note" placeholder="VD: 5 tập, bi-weekly..."></textarea></div>
-    <div id="eps-section" style="display:none">
-      <div class="fg">
-        <label class="fl">Số tập <span style="color:var(--text3);font-weight:400">(Guest · Ngày quay · Ngày air)</span></label>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-          <input class="fi" type="number" id="f-ep-count" value="5" min="1" max="20" style="max-width:80px" onchange="renderEpInputs()">
-          <span style="font-size:12px;color:var(--text2)">tập</span>
-        </div>
-        <div id="ep-inputs"></div>
-      </div>
-    </div>
-    <div class="fg">
-      <label class="fl">Milestones</label>
-      <div id="ms-items"></div>
-      <div class="ms-edit-row" style="margin-top:5px">
-        <input type="date" id="ms-d"><input type="text" id="ms-t" placeholder="Milestone" style="flex:1">
-        <select id="ms-s"><option value="pending">Chờ</option><option value="active">Đang</option><option value="done">Xong</option><option value="air">Air</option></select>
-        <button class="btn ghost" onclick="addMs()" style="padding:5px 10px;font-size:13px">+</button>
-      </div>
-    </div>
-    <div class="fg">
-      <label class="fl">Cờ rủi ro</label>
-      <div id="flags-inp"></div>
-      <button class="add-sub" onclick="addFlag()">+ Thêm cờ</button>
-    </div>
-    <div class="fg">
-      <label class="fl">Checklist PM</label>
-      <div id="tasks-inp"></div>
-      <div class="fi-row" style="margin-top:4px">
-        <input class="fi" id="tn-txt" placeholder="Task" style="flex:3">
-        <input class="fi" type="date" id="tn-due" style="max-width:130px">
-        <input class="fi" id="tn-who" placeholder="Ai" style="max-width:70px">
-        <button class="btn ghost" onclick="addTask()" style="padding:6px 10px">+</button>
-      </div>
-    </div>
-  </div>
-  <div class="modal-ft">
-    <button class="btn danger" id="del-btn" onclick="deleteProj()" style="display:none;margin-right:auto">Xóa</button>
-    <button class="btn ghost" onclick="closeModal()">Hủy</button>
-    <button class="btn primary" onclick="saveProj()">Lưu</button>
-  </div>
-</div>
-</div>
-
-<div class="sync-bar" id="sync-bar"><div class="sync-dot"></div><span id="sync-msg">Sync</span></div>
-
-
-
-<!-- Episode Edit Modal -->
-
 </body>
 </html>
