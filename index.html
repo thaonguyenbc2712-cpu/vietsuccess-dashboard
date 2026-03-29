@@ -490,7 +490,11 @@ function singleHTML(p){
 // series card
 function renderSeries(){
   const el=document.getElementById('cards-series');
-  const list=projects.filter(p=>p.kind==='series'&&!p.done);
+  const list=projects.filter(p=>p.kind==='series'&&!p.done).sort((a,b)=>{
+    const aD=a.episodes?.filter(e=>!e.done).map(e=>e.airDate).filter(Boolean).sort()[0]||a.airDate||'9999';
+    const bD=b.episodes?.filter(e=>!e.done).map(e=>e.airDate).filter(Boolean).sort()[0]||b.airDate||'9999';
+    return aD>bD?1:-1;
+  });
   if(!list.length){el.innerHTML='<div class="empty">Không có series nào đang chạy</div>';return;}
   el.innerHTML=list.map(seriesHTML).join('');
 }
