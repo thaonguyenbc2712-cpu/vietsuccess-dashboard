@@ -679,8 +679,9 @@ function gclClick(el){
   const msPhase=el.dataset.msphase||el.closest('[data-msphase]')?.dataset.msphase;
   const msIdx=el.dataset.msidx||el.closest('[data-msidx]')?.dataset.msidx;
   if(!pid) return;
-  if(isMs&&eid&&msPhase!==undefined&&msIdx!==undefined){
-    toggleMs(eid,pid,msPhase,parseInt(msIdx));
+  const msKey=el.dataset.mskey||el.closest('[data-mskey]')?.dataset.mskey;
+  if(isMs&&eid&&msPhase!==undefined&&msKey){
+    toggleMsByKey(eid,pid,msPhase,msKey);
   } else if(eid&&tid){
     toggleEpTask(pid,eid,tid);
   } else if(tid){
@@ -704,20 +705,21 @@ function renderChecklist(){
       const phases=(e.phases&&e.phases.some(function(ph){return ph.items&&ph.items.length>0;}))?e.phases:buildEpPhases(e,p);
       phases.forEach(function(ph){
         (ph.items||[]).forEach(function(m,mi){
-          // Skip done, air, and items without date
           if(m.status==='done'||m.status==='air'||!m.date) return;
+          // Use stable key = phase+date+first30chars of text
+          const msKey=ph.phase+'|'+m.date+'|'+(m.text||'').slice(0,30);
           all.push({
             id:'ms-'+e.id+'-'+ph.phase+'-'+mi,
             text:m.text,
             due:m.date,
             who:'PM',
-            done:m.status==='done',
+            done:false,
             proj:epLabel+' · '+ph.label,
             pid:p.id,
             eid:e.id,
             isMilestone:true,
             msPhase:ph.phase,
-            msIdx:mi  // actual index in ph.items array
+            msKey:msKey
           });
         });
       });
@@ -758,15 +760,20 @@ function renderChecklist(){
     const label=dayLabel(k);
     const isUrgent=k!=='__later'&&D(k)!==null&&D(k)<=1;
     const rows=tasks.map(function(t){
-      const dpid='data-pid="'+t.pid+'"', deid=t.eid?'data-eid="'+t.eid+'"':'', dtid='data-tid="'+t.id+'"';
-      return '<div class="gcl-item" '+dpid+' '+deid+' '+dtid+' onclick="gclClick(this)">'
-        +'<input type="checkbox"'+(t.done?' checked':'')+' '+dpid+' '+deid+' '+dtid+' onclick="event.stopPropagation();gclClick(this)">'
+      const dpid='data-pid="'+t.pid+'"';
+      const deid=t.eid?'data-eid="'+t.eid+'"':'';
+      const dtid=t.isMilestone?'':'data-tid="'+t.id+'"';
+      const msKeyEnc=t.isMilestone?encodeURIComponent(t.msKey||''):'';
+      const dims=t.isMilestone?'data-isms="true" data-msphase="'+t.msPhase+'" data-mskey="'+msKeyEnc+'"':'';
+      const attrs=dpid+' '+deid+' '+dtid+' '+dims;
+      return '<div class="gcl-item" '+attrs+' onclick="gclClick(this)">'
+        +'<input type="checkbox"'+(t.done?' checked':'')+' '+attrs+' onclick="event.stopPropagation();gclClick(this)">'
         +'<div class="gcl-main"><div class="gcl-txt'+(t.done?' done':'')+'">'+esc(t.text)+'</div>'
         +'<div class="gcl-sub">'+esc(t.proj)+'</div></div>'
-        +'<div class="cl-right">'+(t.who?'<span class="cl-who">'+esc(t.who)+'</span>':'')
+        +'<div class="cl-right">'+(t.who?'<span class="cl-who">'+(t.isMilestone?'Phase':'PM')+'</span>':'')
         +(t.due&&k!=='__later'?'<span class="cl-due'+(isUrgent?' urgent':'')+'">'+F(t.due)+'</span>':'')
         +'</div></div>';
-    }).join('');
+    }).join('');;
     return '<div class="gcl-group">'
       +'<div class="gcl-group-lbl">'+label+' · '+tasks.length+'</div>'
       +'<div class="gcl-list">'+rows+'</div>'
@@ -987,6 +994,28 @@ async function toggleMs(eid, pid, phase, idx){
   const ph=e.phases.find(function(x){return x.phase===phase;});
   if(!ph||!ph.items[idx]) return;
   ph.items[idx].status = ph.items[idx].status==='done' ? 'pending' : 'done';
+  await saveOne(p);
+  renderAll();
+}
+
+async function toggleMsByKey(eid,pid,phase,msKey){
+  const decodedKey=decodeURIComponent(msKey);
+  const p=projects.find(x=>x.id===pid); if(!p) return;
+  const e=(p.episodes||[]).find(x=>x.id===eid); if(!e) return;
+  if(!e.phases||!e.phases.some(function(ph){return ph.items&&ph.items.length>0;})){
+    e.phases=buildEpPhases(e,p);
+  }
+  const ph=e.phases.find(function(x){return x.phase===phase;});
+  if(!ph) return;
+  // Find by key
+  const keyParts=decodedKey.split('|');
+  const targetDate=keyParts[1];
+  const targetText=(keyParts[2]||'');
+  const item=ph.items.find(function(m){
+    return m.date===targetDate&&(m.text||'').slice(0,30)===targetText;
+  });
+  if(!item) return;
+  item.status=item.status==='done'?'pending':'done';
   await saveOne(p);
   renderAll();
 }
