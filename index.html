@@ -879,7 +879,25 @@ function buildEpPhases(e,p){
   const brand=p.brand||'client';
   function aD(d,n){
     if(!d) return '';
-    try{const x=new Date(d);x.setDate(x.getDate()+n);return x.toISOString().slice(0,10);}catch(e){return '';}
+    try{
+      // Ngày lễ Việt Nam 2026 (YYYY-MM-DD)
+      const HOLIDAYS=new Set([
+        '2026-01-01', // Tết Dương lịch
+        '2026-02-16','2026-02-17','2026-02-18','2026-02-19','2026-02-20','2026-02-21','2026-02-22', // Tết Nguyên Đán
+        '2026-04-06', // Giỗ Tổ Hùng Vương (10/3 âm lịch)
+        '2026-04-30', // Giải phóng miền Nam
+        '2026-05-01', // Quốc tế Lao động
+        '2026-09-02', // Quốc khánh
+      ]);
+      const pad=v=>v.toString().padStart(2,'0');
+      const toKey=x=>x.getFullYear()+'-'+pad(x.getMonth()+1)+'-'+pad(x.getDate());
+      const isOff=x=>{const dow=x.getDay();return dow===0||dow===6||HOLIDAYS.has(toKey(x));};
+      const x=new Date(d);
+      const step=n>=0?1:-1;
+      let remaining=Math.abs(n);
+      while(remaining>0){x.setDate(x.getDate()+step);if(!isOff(x))remaining--;}
+      return toKey(x);
+    }catch(e){return '';}
   }
   const pre={phase:'pre',label:'① Pre-Production',items:[]};
   if(shoot){
