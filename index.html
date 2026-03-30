@@ -701,7 +701,7 @@ function renderChecklist(){
       // Tasks PM
       (e.tasks||[]).filter(t=>!t.done).forEach(t=>all.push(Object.assign({},t,{proj:epLabel,pid:p.id,eid:e.id,isMilestone:false})));
       // Milestones from phases (built dynamically)
-      const phases=buildEpPhases(e,p);
+      const phases=(e.phases&&e.phases.some(function(ph){return ph.items&&ph.items.length>0;}))?e.phases:buildEpPhases(e,p);
       phases.forEach(function(ph){
         (ph.items||[]).forEach(function(m,mi){
           // Skip done, air, and items without date
@@ -981,7 +981,6 @@ function importData(e){
 async function toggleMs(eid, pid, phase, idx){
   const p=projects.find(x=>x.id===pid); if(!p) return;
   const e=(p.episodes||[]).find(x=>x.id===eid); if(!e) return;
-  // Ensure phases exist
   if(!e.phases||!e.phases.some(function(ph){return ph.items&&ph.items.length>0;})){
     e.phases=buildEpPhases(e,p);
   }
@@ -989,7 +988,7 @@ async function toggleMs(eid, pid, phase, idx){
   if(!ph||!ph.items[idx]) return;
   ph.items[idx].status = ph.items[idx].status==='done' ? 'pending' : 'done';
   await saveOne(p);
-  if(!db) renderAll();
+  renderAll();
 }
 
 function buildEpPhases(e,p){
@@ -1238,18 +1237,6 @@ async function saveEpEdit(){
   closeEpModal();
 }
 
-async function toggleMs(eid,pid,phase,idx){
-  const p=projects.find(x=>x.id===pid);if(!p)return;
-  const e=(p.episodes||[]).find(x=>x.id===eid);if(!e)return;
-  if(!e.phases||!e.phases.some(function(ph){return ph.items&&ph.items.length>0;})){
-    e.phases=buildEpPhases(e,p);
-  }
-  const ph=e.phases.find(function(x){return x.phase===phase;});
-  if(!ph||!ph.items[idx])return;
-  ph.items[idx].status=ph.items[idx].status==='done'?'pending':'done';
-  await saveOne(p);
-  renderAll();
-}
 
 
 // ── Start app ─────────────────────────────────────────────────────
