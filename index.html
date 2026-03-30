@@ -1258,12 +1258,24 @@ async function saveEpEdit(){
   e.airDate=document.getElementById('ep-air-date').value;
   e.airTime=document.getElementById('ep-air-time').value;
   e.tasks=JSON.parse(JSON.stringify(epTempTasks));
-  e.phases=[
-    {phase:'pre',label:'Pre-Production',items:JSON.parse(JSON.stringify(epTempMs.pre||[]))},
-    {phase:'shoot',label:'Shooting',items:JSON.parse(JSON.stringify(epTempMs.shoot||[]))},
-    {phase:'post',label:'Post Production',items:JSON.parse(JSON.stringify(epTempMs.post||[]))}
-  ];
+  // If user manually edited phases in modal → save those
+  // If phases are empty (user didn't touch them) → rebuild from new dates
+  const hasManualPhases = Object.values(epTempMs).some(function(arr){return arr.length>0;});
+  if(hasManualPhases){
+    e.phases=[
+      {phase:'pre',label:'Pre-Production',items:JSON.parse(JSON.stringify(epTempMs.pre||[]))},
+      {phase:'shoot',label:'Shooting',items:JSON.parse(JSON.stringify(epTempMs.shoot||[]))},
+      {phase:'post',label:'Post Production',items:JSON.parse(JSON.stringify(epTempMs.post||[]))}
+    ];
+  } else {
+    // Rebuild phases from new shoot/air dates
+    e.phases = buildEpPhases(e, p);
+  }
+  // Always clear saved phases so renderEpPhases rebuilds dynamically from dates
+  // This ensures phases always reflect latest shootDate/airDate
+  e.phases = buildEpPhases(e, p);
   await saveOne(p);
+  renderAll();
   closeEpModal();
 }
 
