@@ -1050,6 +1050,172 @@ function renderEpPhases(e,p){
 
 
 
+// ── Episode edit modal ────────────────────────────────────────────
+let epTempMs={pre:[],shoot:[],post:[]};
+let epTempTasks=[];
+
+function openEpEdit(pid,eid){
+  const p=projects.find(x=>x.id===pid);if(!p)return;
+  const e=(p.episodes||[]).find(x=>x.id===eid);if(!e)return;
+  document.getElementById('ep-pid').value=pid;
+  document.getElementById('ep-eid').value=eid;
+  document.getElementById('ep-modal-ttl').textContent=p.name+' — Tập '+e.ep;
+  document.getElementById('ep-guest').value=e.guest||'';
+  document.getElementById('ep-type').value=e.type||'organic';
+  document.getElementById('ep-shoot-date').value=e.shootDate||'';
+  document.getElementById('ep-shoot-time').value=e.shootTime||'';
+  document.getElementById('ep-air-date').value=e.airDate||'';
+  document.getElementById('ep-air-time').value=e.airTime||'20:00';
+  // Build phases from current data
+  const fakeEp={shootDate:e.shootDate||'',airDate:e.airDate||'',airTime:e.airTime||'20:00',
+    shootTime:e.shootTime||'',guest:e.guest||'TBD',type:e.type||'organic'};
+  const phases=buildEpPhases(fakeEp,p);
+  epTempMs={pre:[],shoot:[],post:[]};
+  phases.forEach(function(ph){
+    epTempMs[ph.phase]=(ph.items||[]).map(function(m){return Object.assign({id:uid()},m);});
+  });
+  epTempTasks=JSON.parse(JSON.stringify(e.tasks||[]));
+  renderEpMsAll();
+  renderEpTasksList();
+  document.getElementById('ep-modal').classList.add('open');
+}
+
+function closeEpModal(){document.getElementById('ep-modal').classList.remove('open');}
+
+function updateEpPreview(){
+  // Rebuild phases when dates change
+  const pid=document.getElementById('ep-pid').value;
+  const p=projects.find(x=>x.id===pid)||{type:'organic'};
+  const fakeEp={
+    shootDate:document.getElementById('ep-shoot-date').value,
+    airDate:document.getElementById('ep-air-date').value,
+    airTime:document.getElementById('ep-air-time').value,
+    shootTime:document.getElementById('ep-shoot-time').value,
+    guest:document.getElementById('ep-guest').value||'TBD',
+    type:document.getElementById('ep-type').value
+  };
+  const allEmpty=Object.values(epTempMs).every(function(arr){return arr.length===0;});
+  if(allEmpty){
+    const phases=buildEpPhases(fakeEp,p);
+    epTempMs={pre:[],shoot:[],post:[]};
+    phases.forEach(function(ph){
+      epTempMs[ph.phase]=(ph.items||[]).map(function(m){return Object.assign({id:uid()},m);});
+    });
+    renderEpMsAll();
+  }
+}
+
+function renderEpMsPhase(phase){
+  const el=document.getElementById('ep-ms-'+phase);if(!el)return;
+  const items=epTempMs[phase]||[];
+  let html='';
+  items.forEach(function(m,i){
+    const isDone=m.status==='done';
+    const statusOpts=['pending','active','done','air'].map(function(s){
+      return '<option value="'+s+'"'+(m.status===s?' selected':'')+'>'+s+'</option>';
+    }).join('');
+    html+='<div class="fi-row" style="margin-bottom:4px">'
+      +'<input type="checkbox"'+(isDone?' checked':'')
+      +' data-phase="'+phase+'" data-idx="'+i+'" onchange="epMsCheck(this)"'
+      +' style="width:14px;height:14px;accent-color:var(--green);flex-shrink:0">'
+      +'<input class="fi" type="date" value="'+(m.date||'')+'"'
+      +' data-phase="'+phase+'" data-idx="'+i+'" data-field="date"'
+      +' onchange="epMsChange(this)" style="max-width:130px;padding:5px 8px;font-size:12px">'
+      +'<input class="fi" value="'+esc(m.text||'')+'"'
+      +' data-phase="'+phase+'" data-idx="'+i+'" data-field="text"'
+      +' oninput="epMsChange(this)" placeholder="Milestone" style="flex:1;padding:5px 8px;font-size:12px">'
+      +'<select data-phase="'+phase+'" data-idx="'+i+'" data-field="status"'
+      +' onchange="epMsChange(this)" style="background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--rs);padding:5px 6px;font-size:11px;outline:none">'
+      +statusOpts+'</select>'
+      +(m.brand?'<span class="ms-tag brand" style="flex-shrink:0">Client</span>':'')
+      +'<button class="rm-btn" data-phase="'+phase+'" data-idx="'+i+'" onclick="epMsRemove(this)">×</button>'
+      +'</div>';
+  });
+  el.innerHTML=html;
+}
+function renderEpMsAll(){['pre','shoot','post'].forEach(function(ph){renderEpMsPhase(ph);});}
+function epMsCheck(el){
+  const phase=el.dataset.phase,idx=parseInt(el.dataset.idx);
+  if(epTempMs[phase]&&epTempMs[phase][idx]) epTempMs[phase][idx].status=el.checked?'done':'pending';
+}
+function epMsChange(el){
+  const phase=el.dataset.phase,idx=parseInt(el.dataset.idx),field=el.dataset.field;
+  if(!epTempMs[phase]||!epTempMs[phase][idx]||!field)return;
+  epTempMs[phase][idx][field]=el.value;
+}
+function epMsRemove(el){
+  const phase=el.dataset.phase,idx=parseInt(el.dataset.idx);
+  if(epTempMs[phase])epTempMs[phase].splice(idx,1);
+  renderEpMsPhase(phase);
+}
+function addEpMs(phase){
+  epTempMs[phase]=epTempMs[phase]||[];
+  epTempMs[phase].push({id:uid(),date:'',text:'',status:'pending'});
+  renderEpMsPhase(phase);
+}
+function renderEpTasksList(){
+  document.getElementById('ep-tasks-list').innerHTML=epTempTasks.map(function(t,i){
+    const ud=!t.done&&t.due&&D(t.due)<=0;
+    return '<div class="fi-row" style="margin-bottom:4px">'
+      +'<input type="checkbox"'+(t.done?' checked':'')
+      +' onchange="epTempTasks['+i+'].done=this.checked;renderEpTasksList()"'
+      +' style="width:14px;height:14px;accent-color:var(--green);flex-shrink:0">'
+      +'<input class="fi" value="'+esc(t.text||'')+'"'
+      +' onchange="epTempTasks['+i+'].text=this.value"'
+      +' style="flex:3;padding:5px 8px;font-size:12px;'+(t.done?'text-decoration:line-through;color:var(--text3)':'')+'">'
+      +'<input class="fi" type="date" value="'+(t.due||'')+'"'
+      +' onchange="epTempTasks['+i+'].due=this.value"'
+      +' style="max-width:130px;padding:5px 8px;font-size:12px'+(ud?';border-color:var(--red)':'')+'">'
+      +'<input class="fi" value="'+esc(t.who||'PM')+'"'
+      +' onchange="epTempTasks['+i+'].who=this.value"'
+      +' style="max-width:60px;padding:5px 8px;font-size:12px">'
+      +'<button class="rm-btn" onclick="epTempTasks.splice('+i+',1);renderEpTasksList()">×</button>'
+      +'</div>';
+  }).join('');
+}
+function addEpTask(){
+  const txt=document.getElementById('ep-task-txt').value.trim();if(!txt)return;
+  epTempTasks.push({id:uid(),text:txt,
+    due:document.getElementById('ep-task-due').value,
+    who:document.getElementById('ep-task-who').value||'PM',done:false});
+  document.getElementById('ep-task-txt').value='';
+  document.getElementById('ep-task-due').value='';
+  renderEpTasksList();
+}
+async function saveEpEdit(){
+  const pid=document.getElementById('ep-pid').value;
+  const eid=document.getElementById('ep-eid').value;
+  const p=projects.find(x=>x.id===pid);if(!p)return;
+  const e=(p.episodes||[]).find(x=>x.id===eid);if(!e)return;
+  e.guest=document.getElementById('ep-guest').value.trim();
+  e.type=document.getElementById('ep-type').value;
+  e.shootDate=document.getElementById('ep-shoot-date').value;
+  e.shootTime=document.getElementById('ep-shoot-time').value;
+  e.airDate=document.getElementById('ep-air-date').value;
+  e.airTime=document.getElementById('ep-air-time').value;
+  e.tasks=JSON.parse(JSON.stringify(epTempTasks));
+  e.phases=[
+    {phase:'pre',label:'Pre-Production',items:JSON.parse(JSON.stringify(epTempMs.pre||[]))},
+    {phase:'shoot',label:'Shooting',items:JSON.parse(JSON.stringify(epTempMs.shoot||[]))},
+    {phase:'post',label:'Post Production',items:JSON.parse(JSON.stringify(epTempMs.post||[]))}
+  ];
+  await saveOne(p);
+  closeEpModal();
+}
+
+async function toggleMs(eid,pid,phase,idx){
+  const p=projects.find(x=>x.id===pid);if(!p)return;
+  const e=(p.episodes||[]).find(x=>x.id===eid);if(!e)return;
+  if(!e.phases||!e.phases.some(function(ph){return ph.items&&ph.items.length>0;})){
+    e.phases=buildEpPhases(e,p);
+  }
+  const ph=e.phases.find(function(x){return x.phase===phase;});
+  if(!ph||!ph.items[idx])return;
+  ph.items[idx].status=ph.items[idx].status==='done'?'pending':'done';
+  await saveOne(p);
+}
+
+
 // ── Start app ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function(){
   try{
