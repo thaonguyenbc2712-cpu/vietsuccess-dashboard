@@ -365,7 +365,12 @@ async function init(){
     db=firebase.firestore();
     db.collection(COL).onSnapshot(snap=>{
       if(isSaving) return; // ignore snapshot during save to avoid overwrite
-      const data=snap.docs.map(d=>({id:d.id,...d.data()}));
+      const data=snap.docs.map(d=>{
+        const doc=d.data();
+        // Ensure kind field — default based on episodes presence
+        if(!doc.kind) doc.kind=(doc.episodes&&doc.episodes.length>0)?'series':'single';
+        return Object.assign({id:d.id},doc);
+      });
       if(!data.length){
         if(!projects.length){projects=defaults();bulkSave();}
         // else: keep current projects, don't reset
@@ -374,7 +379,12 @@ async function init(){
         renderAll();
         showSync('Sync ✓');
       }
-    },e=>showSync('⚠ '+e.message));
+    },e=>{
+      showSync('⚠ Firebase: '+e.message);
+      console.error('Firebase error:', e);
+      // Try localStorage fallback
+      try{const r=localStorage.getItem('vs_v5');if(r){projects=JSON.parse(r);renderAll();}}catch(e2){}
+    });
   }catch(e){
     try{const r=localStorage.getItem('vs_v5');if(r)projects=JSON.parse(r);}catch(e2){}
     if(!projects.length)projects=defaults();
@@ -448,12 +458,14 @@ function defaults(){return[
 
 // render
 function renderAll(){
+  try{
+
   const dn=new Date(TODAY);
   document.getElementById('today-str').textContent=dn.toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
   const act=projects.filter(p=>!p.done);
   document.getElementById('active-count').textContent=act.length+' dự án đang chạy';
-  const singles=act.filter(p=>p.kind==='single');
-  const sers=act.filter(p=>p.kind==='series');
+  const singles=act.filter(p=>p.kind==='single'&&!(p.episodes&&p.episodes.length>0));
+  const sers=act.filter(p=>p.kind==='series'||(p.episodes&&p.episodes.length>0));
   const arch=projects.filter(p=>p.done);
   document.getElementById('b-single').textContent=singles.length;
   document.getElementById('b-series').textContent=sers.length;
@@ -481,7 +493,7 @@ function renderAll(){
 // single card
 function renderSingle(){
   const el=document.getElementById('cards-single');
-  const list=projects.filter(p=>p.kind==='single'&&!p.done);
+  const list=projects.filter(p=>p.kind==='single'&&!(p.episodes&&p.episodes.length>0)&&!p.done);
   if(!list.length){el.innerHTML='<div class="empty">Không có tập lẻ nào<br><span style="font-size:11px">Dùng cho tập special ngoài lịch series</span></div>';return;}
   el.innerHTML=list.map(singleHTML).join('');
 }
@@ -520,7 +532,7 @@ function singleHTML(p){
 // series card
 function renderSeries(){
   const el=document.getElementById('cards-series');
-  const list=projects.filter(p=>p.kind==='series'&&!p.done).sort((a,b)=>{
+  const list=projects.filter(p=>(p.kind==='series'||(p.episodes&&p.episodes.length>0))&&!p.done).sort((a,b)=>{
     const nearestAir=p=>{
       const epDates=(p.episodes||[]).filter(e=>!e.done).map(e=>e.airDate).filter(Boolean).sort();
       return epDates[0]||p.airDate||'9999';
@@ -1000,4 +1012,9 @@ function renderEpPhases(e,p){
     return '<div style="font-size:12px;color:var(--text3)">Chưa có data</div>';
   }
 }
+
+  }catch(err){
+    console.error('renderAll error:', err);
+    document.getElementById('cards-series').innerHTML='<div class="empty" style="color:var(--red)">Lỗi render: '+err.message+'<br><small>Bấm F12 → Console để xem chi tiết</small></div>';
+  }
 
