@@ -345,7 +345,8 @@ const FB_CFG = {
 const COL='vs_v5';
 const USE_FB=true;
 const TODAY_D=new Date();TODAY_D.setHours(0,0,0,0);
-const TODAY=TODAY_D.toISOString().slice(0,10);
+const _pad=n=>n.toString().padStart(2,'0');
+const TODAY=TODAY_D.getFullYear()+'-'+_pad(TODAY_D.getMonth()+1)+'-'+_pad(TODAY_D.getDate());
 
 let projects=[], db=null;
 let tMs=[], tFlags=[], tTasks=[], tEps=[];
