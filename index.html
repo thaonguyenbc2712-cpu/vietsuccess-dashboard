@@ -1052,12 +1052,14 @@ function renderEpPhases(e,p){
 
 // ── Start app ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function(){
-  const em=document.getElementById('ep-modal');
-  if(em) em.addEventListener('click',function(e){if(e.target===em)closeEpModal();});
-  ['ep-shoot-date','ep-air-date','ep-air-time','ep-shoot-time','ep-guest','ep-type'].forEach(function(id){
-    const el=document.getElementById(id);
-    if(el) el.addEventListener('change',updateEpPreview);
-  });
+  try{
+    const em=document.getElementById('ep-modal');
+    if(em) em.addEventListener('click',function(e){if(e.target===em)closeEpModal();});
+    ['ep-shoot-date','ep-air-date','ep-air-time','ep-shoot-time','ep-guest','ep-type'].forEach(function(id){
+      const el=document.getElementById(id);
+      if(el&&typeof updateEpPreview==='function') el.addEventListener('change',updateEpPreview);
+    });
+  }catch(e){ console.log('Setup error:',e); }
 });
 init();
 </script>
