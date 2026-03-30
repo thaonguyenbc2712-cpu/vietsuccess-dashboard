@@ -703,19 +703,21 @@ function renderChecklist(){
       // Milestones from phases (built dynamically)
       const phases=buildEpPhases(e,p);
       phases.forEach(function(ph){
-        (ph.items||[]).filter(function(m){return m.status!=='done'&&m.status!=='air'&&m.date;}).forEach(function(m,mi){
+        (ph.items||[]).forEach(function(m,mi){
+          // Skip done, air, and items without date
+          if(m.status==='done'||m.status==='air'||!m.date) return;
           all.push({
             id:'ms-'+e.id+'-'+ph.phase+'-'+mi,
             text:m.text,
             due:m.date,
             who:'PM',
-            done:false,
+            done:m.status==='done',
             proj:epLabel+' · '+ph.label,
             pid:p.id,
             eid:e.id,
             isMilestone:true,
             msPhase:ph.phase,
-            msIdx:mi
+            msIdx:mi  // actual index in ph.items array
           });
         });
       });
@@ -1246,6 +1248,7 @@ async function toggleMs(eid,pid,phase,idx){
   if(!ph||!ph.items[idx])return;
   ph.items[idx].status=ph.items[idx].status==='done'?'pending':'done';
   await saveOne(p);
+  renderAll();
 }
 
 
