@@ -378,14 +378,31 @@ async function init(){
 async function bulkSave(){
   if(db){
     try{
-      const batch=db.batch();
+      // Delete removed docs
       const ex=await db.collection(COL).get();
       const cur=projects.map(p=>p.id);
-      ex.docs.filter(d=>!cur.includes(d.id)).forEach(d=>batch.delete(d.ref));
-      projects.forEach(p=>{const{id,...data}=p;batch.set(db.collection(COL).doc(id),data);});
-      await batch.commit();
-    }catch(e){showSync('⚠ '+e.message);}
-  }else{localStorage.setItem('vs_v5',JSON.stringify(projects));renderAll();showSync('Saved');}
+      const delPs=ex.docs.filter(d=>!cur.includes(d.id)).map(d=>d.ref.delete());
+      await Promise.all(delPs);
+      // Save each project individually (more reliable than batch for large nested data)
+      await Promise.all(projects.map(p=>{
+        const{id,...data}=p;
+        // Deep clone via JSON to strip undefined values Firestore can't handle
+        const clean=JSON.parse(JSON.stringify(data));
+        return db.collection(COL).doc(id).set(clean);
+      }));
+      renderAll();
+      showSync('Đồng bộ xong ✓');
+    }catch(e){
+      // Fallback to localStorage
+      localStorage.setItem('vs_v5',JSON.stringify(projects));
+      renderAll();
+      showSync('⚠ Firebase lỗi, đã lưu local: '+e.message);
+    }
+  }else{
+    localStorage.setItem('vs_v5',JSON.stringify(projects));
+    renderAll();
+    showSync('Saved');
+  }
 }
 async function saveOne(p){
   if(db){const{id,...d}=p;await db.collection(COL).doc(id).set(d).catch(e=>showSync('⚠ '+e.message));}
@@ -865,9 +882,10 @@ function importData(e){
   const r=new FileReader();
   r.onload=async ev=>{
     try{
-      let data=JSON.parse(ev.target.result);if(!Array.isArray(data))throw 0;
-      data=data.map(p=>({...p,kind:p.kind||(p.episodes?'series':'single'),done:p.done||false}));
-      projects=data;await bulkSave();if(!db)renderAll();showSync('Import OK · '+data.length+' dự án');
+      let data=JSON.parse(ev.target.result);if(!Array.isArray(data))throw new Error('Invalid format');
+      data=data.map(p=>Object.assign({},p,{kind:p.kind||(p.episodes?'series':'single'),done:p.done||false}));
+      showSync('Đang import '+data.length+' dự án...');
+      projects=data;await bulkSave();showSync('Import OK · '+data.length+' dự án');
     }catch{alert('File không hợp lệ');}
   };r.readAsText(file);e.target.value='';
 }
