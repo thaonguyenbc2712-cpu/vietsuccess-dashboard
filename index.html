@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Vietsuccess — Dashboard</title>
+<!-- v20260330-0403 -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
@@ -333,7 +337,10 @@ body{background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line
 
 <div class="sync-bar" id="sync-bar"><div class="sync-dot"></div><span id="sync-msg">Sync</span></div>
 
+
+
 <script>
+
 const FB_CFG = {
   apiKey:"AIzaSyBjdbvg9XHPK7Xm296pH2O9_KrHJu1dz90",
   authDomain:"vietsuccess-project-dashboard.firebaseapp.com",
@@ -1041,3 +1048,66 @@ function renderEpPhases(e,p){
 
 
 
+
+
+// ── Start app ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function(){
+  const em=document.getElementById('ep-modal');
+  if(em) em.addEventListener('click',function(e){if(e.target===em)closeEpModal();});
+  ['ep-shoot-date','ep-air-date','ep-air-time','ep-shoot-time','ep-guest','ep-type'].forEach(function(id){
+    const el=document.getElementById(id);
+    if(el) el.addEventListener('change',updateEpPreview);
+  });
+});
+init();
+</script>
+
+<!-- Episode Edit Modal -->
+<div class="overlay" id="ep-modal">
+<div class="modal" style="max-width:600px">
+  <div class="modal-hd"><div class="modal-ttl" id="ep-modal-ttl">Sửa tập</div><button class="modal-x" onclick="closeEpModal()">×</button></div>
+  <div class="modal-body">
+    <input type="hidden" id="ep-pid"><input type="hidden" id="ep-eid">
+    <div class="frow">
+      <div class="fg"><label class="fl">Khách mời (Guest)</label><input class="fi" id="ep-guest" placeholder="VD: Nguyễn Hữu Trí" oninput="updateEpPreview()"></div>
+      <div class="fg"><label class="fl">Loại tập</label>
+        <select class="fs" id="ep-type" onchange="updateEpPreview()">
+          <option value="organic">Organic</option><option value="sponsor">Sponsored</option>
+        </select>
+      </div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Ngày quay</label><input class="fi" type="date" id="ep-shoot-date" onchange="updateEpPreview()"></div>
+      <div class="fg"><label class="fl">Giờ quay</label><input class="fi" type="text" id="ep-shoot-time" placeholder="VD: 9:00 – 11:00AM" oninput="updateEpPreview()"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Ngày air</label><input class="fi" type="date" id="ep-air-date" onchange="updateEpPreview()"></div>
+      <div class="fg"><label class="fl">Giờ air</label>
+        <select class="fs" id="ep-air-time" onchange="updateEpPreview()">
+          <option value="06:00">06:00 sáng</option><option value="12:00">12:00 trưa</option><option value="19:00">19:00 tối</option><option value="20:00">20:00 tối</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">① Pre-Production</label><div id="ep-ms-pre"></div><button class="add-sub" onclick="addEpMs('pre')">+ Thêm milestone</button></div>
+    <div class="fg"><label class="fl">② Shooting</label><div id="ep-ms-shoot"></div><button class="add-sub" onclick="addEpMs('shoot')">+ Thêm milestone</button></div>
+    <div class="fg"><label class="fl">③ Post Production</label><div id="ep-ms-post"></div><button class="add-sub" onclick="addEpMs('post')">+ Thêm milestone</button></div>
+    <div class="fg">
+      <label class="fl">Tasks PM</label>
+      <div id="ep-tasks-list"></div>
+      <div class="fi-row" style="margin-top:6px">
+        <input class="fi" id="ep-task-txt" placeholder="Task mới" style="flex:3;padding:6px 9px;font-size:12px">
+        <input class="fi" type="date" id="ep-task-due" style="max-width:130px;padding:6px 9px;font-size:12px">
+        <input class="fi" id="ep-task-who" placeholder="Ai" style="max-width:70px;padding:6px 9px;font-size:12px" value="PM">
+        <button class="btn ghost" onclick="addEpTask()" style="padding:6px 10px">+</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal-ft">
+    <button class="btn ghost" onclick="closeEpModal()">Hủy</button>
+    <button class="btn primary" onclick="saveEpEdit()">Lưu tập</button>
+  </div>
+</div>
+</div>
+
+</body>
+</html>
