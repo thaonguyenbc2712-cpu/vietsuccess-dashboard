@@ -872,6 +872,21 @@ function importData(e){
   };r.readAsText(file);e.target.value='';
 }
 
+
+async function toggleMs(eid, pid, phase, idx){
+  const p=projects.find(x=>x.id===pid); if(!p) return;
+  const e=(p.episodes||[]).find(x=>x.id===eid); if(!e) return;
+  // Ensure phases exist
+  if(!e.phases||!e.phases.some(function(ph){return ph.items&&ph.items.length>0;})){
+    e.phases=buildEpPhases(e,p);
+  }
+  const ph=e.phases.find(function(x){return x.phase===phase;});
+  if(!ph||!ph.items[idx]) return;
+  ph.items[idx].status = ph.items[idx].status==='done' ? 'pending' : 'done';
+  await saveOne(p);
+  if(!db) renderAll();
+}
+
 function buildEpPhases(e,p){
   const guest=e.guest||'TBD',shoot=e.shootDate||'',air=e.airDate||'';
   const aTime=e.airTime||'20:00',sTime=e.shootTime||'';
@@ -931,25 +946,28 @@ function buildEpPhases(e,p){
 
 function renderEpPhases(e,p){
   try{
-    // Use saved custom phases if they exist, otherwise auto-build
     const phases=(e.phases&&e.phases.some(function(ph){return ph.items&&ph.items.length>0;}))?e.phases:buildEpPhases(e,p);
     const COLORS={'pre':'var(--blue)','shoot':'var(--yellow)','post':'var(--green)'};
+    const phaseDone=function(ph){return ph.items.length>0&&ph.items.every(function(m){return m.status==='done';});};
     return phases.map(function(ph){
       if(!ph.items.length) return '';
-      const key=ph.phase;
-      const color=COLORS[key]||'var(--text2)';
-      const rows=ph.items.map(function(m){
+      const color=COLORS[ph.phase]||'var(--text2)';
+      const isDone=phaseDone(ph);
+      const rows=ph.items.map(function(m,mi){
         const d=D(m.date);
-        return '<div class="ms-row">'
-          +'<span class="ms-date">'+F(m.date)+'</span>'
-          +'<span class="ms-dot '+(m.status||'pending')+'"></span>'
-          +'<span class="ms-text">'+esc(m.text)+'</span>'
+        const done=m.status==='done';
+        const clickFn="toggleMs('"+e.id+"','"+p.id+"','"+ph.phase+"',"+mi+")";
+        return '<div class="ms-row" onclick="'+clickFn+'" style="cursor:pointer;opacity:'+(done?'0.4':'1')+'">'
+          +'<input type="checkbox"'+(done?' checked':'')+' onclick="event.stopPropagation();'+clickFn+'" style="accent-color:var(--green);width:12px;height:12px;cursor:pointer;flex-shrink:0;margin-right:2px">'
+          +'<span class="ms-date" style="'+(done?'text-decoration:line-through;color:var(--text3)':'')+'">'+F(m.date)+'</span>'
+          +'<span class="ms-dot '+(done?'done':m.status||'pending')+'"></span>'
+          +'<span class="ms-text" style="'+(done?'text-decoration:line-through;color:var(--text3)':'')+'">'+esc(m.text)+'</span>'
           +(m.brand?'<span class="ms-tag brand">Client</span>':'')
-          +(d!==null&&d>=0&&d<=3&&m.status!=='done'?'<span class="ms-tag soon">'+d+'d</span>':'')
+          +(d!==null&&d>=0&&d<=3&&!done?'<span class="ms-tag soon">'+d+'d</span>':'')
           +'</div>';
       }).join('');
       return '<div class="ep-phase">'
-        +'<div class="ep-phase-lbl" style="color:'+color+'">'+ph.label+'</div>'
+        +'<div class="ep-phase-lbl" style="color:'+color+';'+(isDone?'opacity:0.45':'')+'">'+ph.label+(isDone?' ✓':'')+'</div>'
         +'<div class="ep-ms">'+rows+'</div>'
         +'</div>';
     }).join('');
@@ -958,260 +976,3 @@ function renderEpPhases(e,p){
   }
 }
 
-
-document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))closeModal();});
-
-// ── Episode edit modal ────────────────────────────────────────────
-let epTempMs = {pre:[], shoot:[], post:[]};
-let epTempTasks = [];
-
-function openEpEdit(pid, eid){
-  const p=projects.find(x=>x.id===pid); if(!p) return;
-  const e=(p.episodes||[]).find(x=>x.id===eid); if(!e) return;
-  document.getElementById('ep-pid').value=pid;
-  document.getElementById('ep-eid').value=eid;
-  document.getElementById('ep-modal-ttl').textContent=p.name+' — Tập '+e.ep;
-  document.getElementById('ep-guest').value=e.guest||'';
-  document.getElementById('ep-type').value=e.type||'organic';
-  document.getElementById('ep-shoot-date').value=e.shootDate||'';
-  document.getElementById('ep-shoot-time').value=e.shootTime||'';
-  document.getElementById('ep-air-date').value=e.airDate||'';
-  document.getElementById('ep-air-time').value=e.airTime||'20:00';
-
-  // Build phases from current data (dynamic)
-  const fakeEp={shootDate:e.shootDate||'',airDate:e.airDate||'',airTime:e.airTime||'20:00',
-    shootTime:e.shootTime||'',guest:e.guest||'TBD',type:e.type||'organic'};
-  const phases=buildEpPhases(fakeEp,p);
-  epTempMs={pre:[],shoot:[],post:[]};
-  phases.forEach(function(ph){ epTempMs[ph.phase]=(ph.items||[]).map(function(m){ return Object.assign({id:uid()},m); }); });
-
-  epTempTasks=JSON.parse(JSON.stringify(e.tasks||[]));
-  renderEpMsAll();
-  renderEpTasksList();
-  document.getElementById('ep-modal').classList.add('open');
-}
-
-function closeEpModal(){ document.getElementById('ep-modal').classList.remove('open'); }
-
-function msStatusOpts(cur){
-  return ['pending','active','done','air'].map(function(s){
-    return '<option value="'+s+'"'+(cur===s?' selected':'')+'>'+s+'</option>';
-  }).join('');
-}
-
-function renderEpMsPhase(phase){
-  const el=document.getElementById('ep-ms-'+phase); if(!el) return;
-  const items=epTempMs[phase]||[];
-  let html='';
-  items.forEach(function(m,i){
-    const isDone=m.status==='done';
-    const statusOpts=['pending','active','done','air'].map(function(s){
-      return '<option value="'+s+'"'+(m.status===s?' selected':'')+'>'+s+'</option>';
-    }).join('');
-    html+='<div class="fi-row" style="margin-bottom:4px">'
-      +'<input type="checkbox"'+(isDone?' checked':'')
-      +' data-phase="'+phase+'" data-idx="'+i+'" onchange="epMsCheck(this)" style="width:14px;height:14px;accent-color:var(--green);flex-shrink:0">'
-      +'<input class="fi" type="date" value="'+(m.date||'')+'"'
-      +' data-phase="'+phase+'" data-idx="'+i+'"'
-      +' data-field="date" onchange="epMsChange(this)" style="max-width:130px;padding:5px 8px;font-size:12px">'
-      +'<input class="fi" value="'+esc(m.text||'')+'"'
-      +' data-phase="'+phase+'" data-idx="'+i+'"'
-      +' data-field="text" oninput="epMsChange(this)" placeholder="Milestone" style="flex:1;padding:5px 8px;font-size:12px">'
-      +'<select data-phase="'+phase+'" data-idx="'+i+'"'
-      +' data-field="status" onchange="epMsChange(this)" style="background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--rs);padding:5px 6px;font-size:11px;outline:none">'
-      +statusOpts+'</select>'
-      +(m.brand?'<span class="ms-tag brand" style="flex-shrink:0">Client</span>':'')
-      +'<button class="rm-btn" data-phase="'+phase+'" data-idx="'+i+'" onclick="epMsRemove(this)">×</button>'
-      +'</div>';
-  });
-  el.innerHTML=html;
-}
-
-function epMsCheck(el){
-  const phase=el.dataset.phase, idx=parseInt(el.dataset.idx);
-  if(epTempMs[phase]&&epTempMs[phase][idx]) epTempMs[phase][idx].status=el.checked?'done':'pending';
-}
-function epMsChange(el){
-  const phase=el.dataset.phase, idx=parseInt(el.dataset.idx), field=el.dataset.field;
-  if(!epTempMs[phase]||!epTempMs[phase][idx]||!field) return;
-  epTempMs[phase][idx][field]=el.value;
-}
-
-function epMsRemove(el){
-  const phase=el.dataset.phase, idx=parseInt(el.dataset.idx);
-  if(epTempMs[phase]) epTempMs[phase].splice(idx,1);
-  renderEpMsPhase(phase);
-}
-
-
-function renderEpMsAll(){ ['pre','shoot','post'].forEach(function(ph){renderEpMsPhase(ph);}); }
-
-function addEpMs(phase){
-  epTempMs[phase]=epTempMs[phase]||[];
-  epTempMs[phase].push({id:uid(),date:'',text:'',status:'pending'});
-  renderEpMsPhase(phase);
-}
-
-function renderEpTasksList(){
-  document.getElementById('ep-tasks-list').innerHTML=epTempTasks.map(function(t,i){
-    const ud=!t.done&&t.due&&D(t.due)<=0;
-    return '<div class="fi-row" style="margin-bottom:4px">'
-      +'<input type="checkbox" '+(t.done?'checked':'')
-      +' onchange="epTempTasks['+i+'].done=this.checked;renderEpTasksList()" '
-      +'style="width:14px;height:14px;accent-color:var(--green);flex-shrink:0">'
-      +'<input class="fi" value="'+esc(t.text||'')+'" '
-      +'onchange="epTempTasks['+i+'].text=this.value" placeholder="Task" '
-      +'style="flex:3;padding:5px 8px;font-size:12px;'+(t.done?'text-decoration:line-through;color:var(--text3)':'')+'">'
-      +'<input class="fi" type="date" value="'+(t.due||'')+'" '
-      +'onchange="epTempTasks['+i+'].due=this.value" '
-      +'style="max-width:130px;padding:5px 8px;font-size:12px'+(ud?';border-color:var(--red)':'')+'">'
-      +'<input class="fi" value="'+esc(t.who||'PM')+'" '
-      +'onchange="epTempTasks['+i+'].who=this.value" style="max-width:60px;padding:5px 8px;font-size:12px">'
-      +'<button class="rm-btn" onclick="epTempTasks.splice('+i+',1);renderEpTasksList()">×</button>'
-      +'</div>';
-  }).join('');
-}
-
-function addEpTask(){
-  const txt=document.getElementById('ep-task-txt').value.trim(); if(!txt) return;
-  epTempTasks.push({id:uid(),text:txt,due:document.getElementById('ep-task-due').value,
-    who:document.getElementById('ep-task-who').value||'PM',done:false});
-  document.getElementById('ep-task-txt').value='';
-  document.getElementById('ep-task-due').value='';
-  renderEpTasksList();
-}
-
-function updateEpPreview(){
-  // Rebuild phases from current form values and refresh milestone editors
-  const pid=document.getElementById('ep-pid').value;
-  const p=projects.find(x=>x.id===pid)||{type:'organic'};
-  const fakeEp={
-    shootDate:document.getElementById('ep-shoot-date').value,
-    airDate:document.getElementById('ep-air-date').value,
-    airTime:document.getElementById('ep-air-time').value,
-    shootTime:document.getElementById('ep-shoot-time').value,
-    guest:document.getElementById('ep-guest').value||'TBD',
-    type:document.getElementById('ep-type').value
-  };
-  const phases=buildEpPhases(fakeEp,p);
-  // Update only if user hasn't manually edited phases yet
-  // (check if all current items are still auto-generated by comparing count)
-  const allEmpty=Object.values(epTempMs).every(function(arr){return arr.length===0;});
-  if(allEmpty){
-    epTempMs={pre:[],shoot:[],post:[]};
-    phases.forEach(function(ph){ epTempMs[ph.phase]=(ph.items||[]).map(function(m){return Object.assign({id:uid()},m);}); });
-    renderEpMsAll();
-  }
-}
-
-async function saveEpEdit(){
-  const pid=document.getElementById('ep-pid').value;
-  const eid=document.getElementById('ep-eid').value;
-  const p=projects.find(x=>x.id===pid); if(!p) return;
-  const e=(p.episodes||[]).find(x=>x.id===eid); if(!e) return;
-
-  e.guest=document.getElementById('ep-guest').value.trim();
-  e.type=document.getElementById('ep-type').value;
-  e.shootDate=document.getElementById('ep-shoot-date').value;
-  e.shootTime=document.getElementById('ep-shoot-time').value;
-  e.airDate=document.getElementById('ep-air-date').value;
-  e.airTime=document.getElementById('ep-air-time').value;
-  e.tasks=JSON.parse(JSON.stringify(epTempTasks));
-  // Save custom phases (overrides auto-generated)
-  e.phases=[
-    {phase:'pre',label:'Pre-Production',items:JSON.parse(JSON.stringify(epTempMs.pre||[]))},
-    {phase:'shoot',label:'Shooting',items:JSON.parse(JSON.stringify(epTempMs.shoot||[]))},
-    {phase:'post',label:'Post Production',items:JSON.parse(JSON.stringify(epTempMs.post||[]))}
-  ];
-
-  await saveOne(p);
-  if(!db) renderAll();
-  closeEpModal();
-}
-
-// ep-modal overlay close handled in init after DOM ready
-
-init();
-// Setup ep-modal close after DOM ready
-document.addEventListener('DOMContentLoaded', function(){
-  const em = document.getElementById('ep-modal');
-  if(em) em.addEventListener('click', function(e){ if(e.target===em) closeEpModal(); });
-  // Live preview listeners
-  ['ep-shoot-date','ep-air-date','ep-air-time','ep-shoot-time','ep-guest','ep-type'].forEach(function(id){
-    const el = document.getElementById(id);
-    if(el) el.addEventListener('change', updateEpPreview);
-  });
-});
-</script>
-
-<!-- Episode Edit Modal -->
-<div class="overlay" id="ep-modal">
-<div class="modal" style="max-width:600px">
-  <div class="modal-hd">
-    <div class="modal-ttl" id="ep-modal-ttl">Sửa tập</div>
-    <button class="modal-x" onclick="closeEpModal()">×</button>
-  </div>
-  <div class="modal-body">
-    <input type="hidden" id="ep-pid">
-    <input type="hidden" id="ep-eid">
-    <div class="frow">
-      <div class="fg"><label class="fl">Khách mời (Guest)</label><input class="fi" id="ep-guest" placeholder="VD: Nguyễn Hữu Trí" oninput="updateEpPreview()"></div>
-      <div class="fg"><label class="fl">Loại tập</label>
-        <select class="fs" id="ep-type" onchange="updateEpPreview()">
-          <option value="organic">Organic</option>
-          <option value="sponsor">Sponsored</option>
-        </select>
-      </div>
-    </div>
-    <div class="frow">
-      <div class="fg"><label class="fl">Ngày quay</label><input class="fi" type="date" id="ep-shoot-date" onchange="updateEpPreview()"></div>
-      <div class="fg"><label class="fl">Giờ quay</label><input class="fi" type="text" id="ep-shoot-time" placeholder="VD: 9:00 – 11:00AM" oninput="updateEpPreview()"></div>
-    </div>
-    <div class="frow">
-      <div class="fg"><label class="fl">Ngày air</label><input class="fi" type="date" id="ep-air-date" onchange="updateEpPreview()"></div>
-      <div class="fg"><label class="fl">Giờ air</label>
-        <select class="fs" id="ep-air-time" onchange="updateEpPreview()">
-          <option value="06:00">06:00 sáng</option>
-          <option value="12:00">12:00 trưa</option>
-          <option value="19:00">19:00 tối</option>
-          <option value="20:00">20:00 tối</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- 3 Phase milestone editors -->
-    <div class="fg">
-      <label class="fl">① Pre-Production</label>
-      <div id="ep-ms-pre"></div>
-      <button class="add-sub" onclick="addEpMs('pre')">+ Thêm milestone</button>
-    </div>
-    <div class="fg">
-      <label class="fl">② Shooting</label>
-      <div id="ep-ms-shoot"></div>
-      <button class="add-sub" onclick="addEpMs('shoot')">+ Thêm milestone</button>
-    </div>
-    <div class="fg">
-      <label class="fl">③ Post Production</label>
-      <div id="ep-ms-post"></div>
-      <button class="add-sub" onclick="addEpMs('post')">+ Thêm milestone</button>
-    </div>
-
-    <!-- Tasks PM -->
-    <div class="fg">
-      <label class="fl">Tasks PM</label>
-      <div id="ep-tasks-list"></div>
-      <div class="fi-row" style="margin-top:6px">
-        <input class="fi" id="ep-task-txt" placeholder="Task mới" style="flex:3;padding:6px 9px;font-size:12px">
-        <input class="fi" type="date" id="ep-task-due" style="max-width:130px;padding:6px 9px;font-size:12px">
-        <input class="fi" id="ep-task-who" placeholder="Ai" style="max-width:70px;padding:6px 9px;font-size:12px" value="PM">
-        <button class="btn ghost" onclick="addEpTask()" style="padding:6px 10px">+</button>
-      </div>
-    </div>
-  </div>
-  <div class="modal-ft">
-    <button class="btn ghost" onclick="closeEpModal()">Hủy</button>
-    <button class="btn primary" onclick="saveEpEdit()">Lưu tập</button>
-  </div>
-</div>
-</body>
-</html>
