@@ -344,8 +344,8 @@ const FB_CFG = {
 };
 const COL='vs_v5';
 const USE_FB=true;
-const TODAY='2026-03-29';
-const TODAY_D=new Date(TODAY);
+const TODAY_D=new Date();TODAY_D.setHours(0,0,0,0);
+const TODAY=TODAY_D.toISOString().slice(0,10);
 
 let projects=[], db=null;
 let tMs=[], tFlags=[], tTasks=[], tEps=[];
@@ -615,8 +615,8 @@ function renderChecklist(){
   const el=document.getElementById('gcl');
   let all=[];
   projects.filter(p=>!p.done).forEach(p=>{
-    (p.tasks||[]).forEach(t=>all.push(Object.assign({},t,{proj:p.name,pid:p.id,eid:null})));
-    (p.episodes||[]).filter(e=>!e.done).forEach(e=>(e.tasks||[]).forEach(t=>all.push(Object.assign({},t,{proj:p.name+' — Tập '+e.ep,pid:p.id,eid:e.id}))));
+    (p.tasks||[]).filter(t=>!t.done).forEach(t=>all.push(Object.assign({},t,{proj:p.name,pid:p.id,eid:null})));
+    (p.episodes||[]).filter(e=>!e.done).forEach(e=>(e.tasks||[]).filter(t=>!t.done).forEach(t=>all.push(Object.assign({},t,{proj:p.name+' — Tập '+e.ep,pid:p.id,eid:e.id}))));
   });
   if(q) all=all.filter(t=>t.text.toLowerCase().includes(q)||t.proj.toLowerCase().includes(q));
   all.sort((a,b)=>!a.due?1:!b.due?-1:new Date(a.due)-new Date(b.due));
