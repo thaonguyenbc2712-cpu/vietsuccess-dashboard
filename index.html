@@ -675,9 +675,17 @@ function gclClick(el){
   const pid=el.dataset.pid||el.closest('[data-pid]')?.dataset.pid;
   const eid=el.dataset.eid||el.closest('[data-eid]')?.dataset.eid;
   const tid=el.dataset.tid||el.closest('[data-tid]')?.dataset.tid;
-  if(!pid||!tid) return;
-  if(eid) toggleEpTask(pid,eid,tid);
-  else toggleTask(pid,tid);
+  const isMs=el.dataset.isms==='true'||el.closest('[data-isms]')?.dataset.isms==='true';
+  const msPhase=el.dataset.msphase||el.closest('[data-msphase]')?.dataset.msphase;
+  const msIdx=el.dataset.msidx||el.closest('[data-msidx]')?.dataset.msidx;
+  if(!pid) return;
+  if(isMs&&eid&&msPhase!==undefined&&msIdx!==undefined){
+    toggleMs(eid,pid,msPhase,parseInt(msIdx));
+  } else if(eid&&tid){
+    toggleEpTask(pid,eid,tid);
+  } else if(tid){
+    toggleTask(pid,tid);
+  }
 }
 
 function renderChecklist(){
@@ -685,8 +693,33 @@ function renderChecklist(){
   const el=document.getElementById('gcl');
   let all=[];
   projects.filter(p=>!p.done).forEach(p=>{
-    (p.tasks||[]).filter(t=>!t.done).forEach(t=>all.push(Object.assign({},t,{proj:p.name,pid:p.id,eid:null})));
-    (p.episodes||[]).filter(e=>!e.done).forEach(e=>(e.tasks||[]).filter(t=>!t.done).forEach(t=>all.push(Object.assign({},t,{proj:p.name+' — Tập '+e.ep,pid:p.id,eid:e.id}))));
+    // Series-level tasks
+    (p.tasks||[]).filter(t=>!t.done).forEach(t=>all.push(Object.assign({},t,{proj:p.name,pid:p.id,eid:null,isMilestone:false})));
+    // Episode tasks + milestones from 3 phases
+    (p.episodes||[]).filter(e=>!e.done).forEach(function(e){
+      const epLabel=p.name+' — Tập '+e.ep;
+      // Tasks PM
+      (e.tasks||[]).filter(t=>!t.done).forEach(t=>all.push(Object.assign({},t,{proj:epLabel,pid:p.id,eid:e.id,isMilestone:false})));
+      // Milestones from phases (built dynamically)
+      const phases=buildEpPhases(e,p);
+      phases.forEach(function(ph){
+        (ph.items||[]).filter(function(m){return m.status!=='done'&&m.status!=='air'&&m.date;}).forEach(function(m,mi){
+          all.push({
+            id:'ms-'+e.id+'-'+ph.phase+'-'+mi,
+            text:m.text,
+            due:m.date,
+            who:'PM',
+            done:false,
+            proj:epLabel+' · '+ph.label,
+            pid:p.id,
+            eid:e.id,
+            isMilestone:true,
+            msPhase:ph.phase,
+            msIdx:mi
+          });
+        });
+      });
+    });
   });
   if(q) all=all.filter(t=>t.text.toLowerCase().includes(q)||t.proj.toLowerCase().includes(q));
   all.sort((a,b)=>!a.due?1:!b.due?-1:new Date(a.due)-new Date(b.due));
