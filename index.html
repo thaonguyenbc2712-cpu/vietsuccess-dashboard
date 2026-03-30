@@ -1281,64 +1281,153 @@ const SHEET_TABS = {
 };
 
 async function syncFromSheets(){
-  showSync('Đang fetch Google Sheets...');
+  showSync('Đang fetch từ Google Sheets...');
   try{
-    // Try fetching April tab first
-    const gid = SHEET_TABS['Apr'];
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
-    const res = await fetch(url);
-    if(!res.ok) throw new Error('Không fetch được: '+res.status);
-    const csv = await res.text();
-    
-    // Parse CSV and extract shooting/air events
-    const events = parseSheetCSV(csv);
+    const res = await fetch('https://script.google.com/macros/s/AKfycbx2zqYcurXJXCGXUReHDTWuZloztUYwaWgd9Be3B9d5HvqCisukKvHpg7ht5uipuRdq6Q/exec');
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const json = await res.json();
+    const events = json.events || [];
     showSync('Đọc được '+events.length+' events — đang merge...');
-    
-    // Merge into existing projects
-    mergeSheetEvents(events);
-    await bulkSave();
-    showSync('Sync xong ✓ — '+events.length+' events từ GG Sheets');
+    if(events.length > 0){
+      mergeSheetEvents(events);
+      await bulkSave();
+      renderAll();
+      showSync('Sync xong ✓ — '+events.length+' events từ GG Sheets');
+    } else {
+      showSync('Không có event mới nào');
+    }
   }catch(e){
     console.error('Sync error:', e);
     showSync('⚠ Sync lỗi: '+e.message);
-    // Show manual fallback
-    const d=document.createElement('div');
-    d.style='position:fixed;top:60px;right:16px;background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--r);padding:14px 16px;font-size:12px;color:var(--text2);z-index:300;max-width:320px';
-    d.innerHTML='<b style="color:var(--text)">Không fetch được tự động</b><br><br>'
-      +'Google Sheets chặn CORS từ browser. Thay thế:<br><br>'
-      +'1. Mở Google Sheet<br>'
-      +'2. <b>Tệp → Tải xuống → .xlsx</b><br>'
-      +'3. Upload file đó lên Claude để parse<br><br>'
-      +'<button onclick="this.parentNode.remove()" style="background:var(--accent);color:#fff;border:none;border-radius:4px;padding:5px 12px;cursor:pointer;font-size:12px">Đóng</button>';
-    document.body.appendChild(d);
-    setTimeout(()=>d.remove(), 15000);
   }
 }
 
-function parseSheetCSV(csv){
-  // Basic CSV parser for calendar format
-  const lines = csv.split('\n').map(l=>l.trim()).filter(Boolean);
-  const events = [];
-  const YELLOW_KEYWORDS = ['AM','PM','h00','h30','9:','10:','11:','13:','14:','15:','16:'];
-  lines.forEach(function(line){
-    const cells = line.split(',').map(c=>c.replace(/^"|"$/g,'').trim());
-    cells.forEach(function(cell){
-      if(!cell||cell.length<3) return;
-      // Detect shooting (has time) or air (has show name without time)
-      const hasTime = YELLOW_KEYWORDS.some(k=>cell.includes(k));
-      if(hasTime){
-        events.push({type:'shooting', raw:cell});
-      } else if(cell.includes('EP')||cell.includes('ep')){
-        events.push({type:'air', raw:cell});
-      }
-    });
-  });
-  return events;
-}
+// parseSheetCSV removed — using Apps Script instead
 
 function mergeSheetEvents(events){
-  // For now just log — full merge requires date context
-  console.log('Events to merge:', events);
+  const SERIES_MAP = [
+    {key:'MANULIFE', match:['MANULIFE']},
+    {key:'MINDFUL LEADERSHIP', match:['MINDFUL','MLss']},
+    {key:'MOSAIC MINDS', match:['MOSAIC MIND']},
+    {key:'MODERN FARMER', match:['MODERN FARMER']},
+    {key:'WEALTH-BEING', match:['WEALTH','KUSTO','THE PEARL','WB ','WB-']},
+    {key:'BUSINESS INSIGHTS', match:['BUSINESS INSIGHTS','BI -','BI-',' BI ','[BI]']},
+    {key:'THE QUOC KHANH SHOW', match:['TQKS','QUOC KHANH']},
+    {key:'FUTURE IMPACT ACADEMY', match:['FIA','FUTURE IMPACT']},
+    {key:'FPTU', match:['FPTU']},
+    {key:'THE MORNING TALK', match:['MORNING TALK','KHOAI']},
+  ];
+
+  function getSeriesName(raw){
+    const u = raw.toUpperCase();
+    for(const s of SERIES_MAP){
+      if(s.match.some(m=>u.includes(m.toUpperCase()))) return s.key;
+    }
+    return null;
+  }
+
+  function getGuest(raw){
+    // Remove time prefix: "9:00 – 11:00AM "
+    let s = raw.replace(/^\d{1,2}[h:]\d{0,2}\s*[-–]\s*\d{1,2}[h:]\d{0,2}\s*[APap][Mm]?\s*\n?/,'');
+    // Remove [SHOW] prefix
+    s = s.replace(/^\[.*?\]\s*/,'');
+    // Remove HOST HOSTNAME
+    s = s.replace(/\s*[-–]\s*HOST\s+.+$/i,'');
+    // Remove show name prefix
+    for(const ser of SERIES_MAP){
+      for(const m of ser.match){
+        s = s.replace(new RegExp(m,'gi'),'');
+      }
+    }
+    // Remove EP number
+    s = s.replace(/EP\s*\d+\s*[-–]?/gi,'');
+    // Remove leading dashes, spaces
+    s = s.replace(/^[\s-–]+/,'').trim();
+    return s || 'TBD';
+  }
+
+  function getAirTime(seriesName, raw){
+    if(raw.toUpperCase().includes('NAB')) return '12:00';
+    if(seriesName === 'THE QUOC KHANH SHOW') return '19:00';
+    if(seriesName === 'THE MORNING TALK') return '06:00';
+    return '20:00';
+  }
+
+  // Group events by series
+  const shootMap = {}; // date → {series, guest, time}
+  const airMap = {};   // date → {series, guest, type, airTime}
+
+  events.forEach(function(ev){
+    const series = getSeriesName(ev.raw);
+    if(!series) return;
+    const guest = getGuest(ev.raw);
+
+    if(ev.type === 'shooting'){
+      if(!shootMap[ev.date]) shootMap[ev.date] = [];
+      shootMap[ev.date].push({series, guest, raw:ev.raw});
+    } else {
+      const airTime = getAirTime(series, ev.raw);
+      if(!airMap[ev.date]) airMap[ev.date] = [];
+      airMap[ev.date].push({series, guest, type:ev.type, airTime});
+    }
+  });
+
+  let added = 0, updated = 0;
+
+  // Process air events — add or update episodes
+  Object.entries(airMap).forEach(function([date, airs]){
+    airs.forEach(function(air){
+      const p = projects.find(function(x){
+        return !x.done && (x.name===air.series||x.name.includes(air.series)||air.series.includes(x.name));
+      });
+      if(!p) return;
+
+      // Check if episode with this air date already exists
+      const existing = (p.episodes||[]).find(function(e){ return e.airDate===date; });
+      if(existing){
+        // Update guest if TBD
+        if((!existing.guest||existing.guest==='TBD') && air.guest && air.guest!=='TBD'){
+          existing.guest = air.guest;
+          updated++;
+        }
+        return;
+      }
+
+      // Find matching shoot date
+      let shootDate='', shootTime='';
+      Object.entries(shootMap).forEach(function([sd, shoots]){
+        if(sd <= date){
+          const match = shoots.find(function(s){return s.series===air.series;});
+          if(match){ shootDate=sd; shootTime=match.raw.match(/^(\d{1,2}[h:]\d{0,2}\s*[-–]\s*\d{1,2}[h:]\d{0,2}\s*[APap][Mm]?)/)?.[1]||''; }
+        }
+      });
+
+      // Add new episode
+      const newEp = {
+        id: uid(),
+        ep: (p.episodes||[]).length + 1,
+        guest: air.guest||'TBD',
+        shootDate: shootDate,
+        shootTime: shootTime,
+        airDate: date,
+        airTime: air.airTime,
+        done: false,
+        type: air.type==='air_sponsor'?'sponsor':'organic',
+        milestones: [],
+        tasks: [],
+        phases: []
+      };
+      if(!p.episodes) p.episodes = [];
+      p.episodes.push(newEp);
+      // Re-number
+      p.episodes.sort(function(a,b){return a.airDate>b.airDate?1:-1;});
+      p.episodes.forEach(function(e,i){e.ep=i+1;});
+      added++;
+    });
+  });
+
+  console.log('Sync: '+added+' tập mới, '+updated+' tập cập nhật guest');
+  showSync('Sync xong ✓ — '+added+' tập mới, '+updated+' cập nhật');
 }
 
 
