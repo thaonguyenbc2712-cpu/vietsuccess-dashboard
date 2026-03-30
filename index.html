@@ -363,43 +363,38 @@ async function init(){
   try{
     firebase.initializeApp(FB_CFG);
     db=firebase.firestore();
-    db.collection(COL).onSnapshot(snap=>{
+    // One-time load first for speed
+    const snap=await db.collection(COL).get();
+    if(snap.docs.length>0){
+      projects=snap.docs.map(function(d){
+        const doc=d.data();
+        if(!doc.kind) doc.kind=(doc.episodes&&doc.episodes.length>0)?'series':'single';
+        return Object.assign({id:d.id},doc);
+      });
+    } else {
+      projects=defaults();
+      await bulkSave();
+    }
+    renderAll();
+    showSync('Sync ✓ — '+projects.length+' dự án');
+    // Then listen for real-time updates
+    db.collection(COL).onSnapshot(function(snap2){
       if(isSaving) return;
-      try{
-        const rawDocs=snap.docs;
-        // Debug info on screen
-        const dbg=document.createElement('div');
-        dbg.id='dbg-info';
-        dbg.style='position:fixed;bottom:50px;left:10px;background:#1a1a1a;border:1px solid #444;padding:8px 12px;font-size:11px;color:#aaa;border-radius:6px;z-index:999;max-width:400px';
-        dbg.innerHTML='Firebase: '+rawDocs.length+' docs trong collection <b>'+COL+'</b>';
-        document.body.appendChild(dbg);
-        setTimeout(()=>{const el=document.getElementById('dbg-info');if(el)el.remove();},8000);
-
-        const data=rawDocs.map(d=>{
-          const doc=d.data();
-          if(!doc.kind) doc.kind=(doc.episodes&&doc.episodes.length>0)?'series':'single';
-          return Object.assign({id:d.id},doc);
-        });
-        if(!data.length){
-          if(!projects.length){projects=defaults();bulkSave();}
-        } else {
-          projects=data;
-          renderAll();
-          showSync('Sync ✓ — '+data.length+' dự án');
-        }
-      }catch(err){
-        showSync('⚠ Render lỗi: '+err.message);
-        console.error(err);
-      }
-    },e=>{
-      showSync('⚠ Firebase: '+e.message);
-      console.error('Firebase error:', e);
-      try{const r=localStorage.getItem('vs_v5');if(r){projects=JSON.parse(r);renderAll();}}catch(e2){}
-    });
+      if(snap2.docs.length===0) return; // ignore empty (happens during bulk save)
+      projects=snap2.docs.map(function(d){
+        const doc=d.data();
+        if(!doc.kind) doc.kind=(doc.episodes&&doc.episodes.length>0)?'series':'single';
+        return Object.assign({id:d.id},doc);
+      });
+      renderAll();
+      showSync('Sync ✓');
+    },function(e){ console.error('Snapshot error:',e); });
   }catch(e){
+    console.error('Init error:',e);
     try{const r=localStorage.getItem('vs_v5');if(r)projects=JSON.parse(r);}catch(e2){}
     if(!projects.length)projects=defaults();
-    renderAll();showSync('Offline');
+    renderAll();
+    showSync('Offline — '+e.message);
   }
 }
 async function bulkSave(){
