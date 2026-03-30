@@ -364,25 +364,36 @@ async function init(){
     firebase.initializeApp(FB_CFG);
     db=firebase.firestore();
     db.collection(COL).onSnapshot(snap=>{
-      if(isSaving) return; // ignore snapshot during save to avoid overwrite
-      const data=snap.docs.map(d=>{
-        const doc=d.data();
-        // Ensure kind field — default based on episodes presence
-        if(!doc.kind) doc.kind=(doc.episodes&&doc.episodes.length>0)?'series':'single';
-        return Object.assign({id:d.id},doc);
-      });
-      if(!data.length){
-        if(!projects.length){projects=defaults();bulkSave();}
-        // else: keep current projects, don't reset
-      } else {
-        projects=data;
-        renderAll();
-        showSync('Sync ✓');
+      if(isSaving) return;
+      try{
+        const rawDocs=snap.docs;
+        // Debug info on screen
+        const dbg=document.createElement('div');
+        dbg.id='dbg-info';
+        dbg.style='position:fixed;bottom:50px;left:10px;background:#1a1a1a;border:1px solid #444;padding:8px 12px;font-size:11px;color:#aaa;border-radius:6px;z-index:999;max-width:400px';
+        dbg.innerHTML='Firebase: '+rawDocs.length+' docs trong collection <b>'+COL+'</b>';
+        document.body.appendChild(dbg);
+        setTimeout(()=>{const el=document.getElementById('dbg-info');if(el)el.remove();},8000);
+
+        const data=rawDocs.map(d=>{
+          const doc=d.data();
+          if(!doc.kind) doc.kind=(doc.episodes&&doc.episodes.length>0)?'series':'single';
+          return Object.assign({id:d.id},doc);
+        });
+        if(!data.length){
+          if(!projects.length){projects=defaults();bulkSave();}
+        } else {
+          projects=data;
+          renderAll();
+          showSync('Sync ✓ — '+data.length+' dự án');
+        }
+      }catch(err){
+        showSync('⚠ Render lỗi: '+err.message);
+        console.error(err);
       }
     },e=>{
       showSync('⚠ Firebase: '+e.message);
       console.error('Firebase error:', e);
-      // Try localStorage fallback
       try{const r=localStorage.getItem('vs_v5');if(r){projects=JSON.parse(r);renderAll();}}catch(e2){}
     });
   }catch(e){
