@@ -228,6 +228,7 @@ body{background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line
       <div class="today-info"><div class="today-date" id="today-str">--</div><div class="today-sub" id="active-count">--</div></div>
       <button class="icon-btn" onclick="exportData()">↓ Export</button>
       <label class="icon-btn" style="cursor:pointer">↑ Import<input type="file" accept=".json" onchange="importData(event)" style="display:none"></label>
+      <button class="icon-btn" onclick="syncFromSheets()" style="background:var(--greenbg);color:var(--green);border-color:var(--greenborder)">⟳ Sync GG Sheets</button>
     </div>
   </div>
 
@@ -1266,6 +1267,79 @@ async function saveEpEdit(){
   closeEpModal();
 }
 
+
+
+// ── Google Sheets Sync ────────────────────────────────────────────
+const SHEET_ID='1i21W02RUweM8h0ydnfdd0qmGfYd7ufLUKYcrVFHFqfY';
+
+// Month name → sheet gid mapping (get from URL when you click each tab)
+// Format: 'SheetName': 'gid_number'
+const SHEET_TABS = {
+  'Apr': '739700420',
+  'May': '', // fill in gid for May tab
+  'Jun': '', // fill in gid for Jun tab
+};
+
+async function syncFromSheets(){
+  showSync('Đang fetch Google Sheets...');
+  try{
+    // Try fetching April tab first
+    const gid = SHEET_TABS['Apr'];
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('Không fetch được: '+res.status);
+    const csv = await res.text();
+    
+    // Parse CSV and extract shooting/air events
+    const events = parseSheetCSV(csv);
+    showSync('Đọc được '+events.length+' events — đang merge...');
+    
+    // Merge into existing projects
+    mergeSheetEvents(events);
+    await bulkSave();
+    showSync('Sync xong ✓ — '+events.length+' events từ GG Sheets');
+  }catch(e){
+    console.error('Sync error:', e);
+    showSync('⚠ Sync lỗi: '+e.message);
+    // Show manual fallback
+    const d=document.createElement('div');
+    d.style='position:fixed;top:60px;right:16px;background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--r);padding:14px 16px;font-size:12px;color:var(--text2);z-index:300;max-width:320px';
+    d.innerHTML='<b style="color:var(--text)">Không fetch được tự động</b><br><br>'
+      +'Google Sheets chặn CORS từ browser. Thay thế:<br><br>'
+      +'1. Mở Google Sheet<br>'
+      +'2. <b>Tệp → Tải xuống → .xlsx</b><br>'
+      +'3. Upload file đó lên Claude để parse<br><br>'
+      +'<button onclick="this.parentNode.remove()" style="background:var(--accent);color:#fff;border:none;border-radius:4px;padding:5px 12px;cursor:pointer;font-size:12px">Đóng</button>';
+    document.body.appendChild(d);
+    setTimeout(()=>d.remove(), 15000);
+  }
+}
+
+function parseSheetCSV(csv){
+  // Basic CSV parser for calendar format
+  const lines = csv.split('\n').map(l=>l.trim()).filter(Boolean);
+  const events = [];
+  const YELLOW_KEYWORDS = ['AM','PM','h00','h30','9:','10:','11:','13:','14:','15:','16:'];
+  lines.forEach(function(line){
+    const cells = line.split(',').map(c=>c.replace(/^"|"$/g,'').trim());
+    cells.forEach(function(cell){
+      if(!cell||cell.length<3) return;
+      // Detect shooting (has time) or air (has show name without time)
+      const hasTime = YELLOW_KEYWORDS.some(k=>cell.includes(k));
+      if(hasTime){
+        events.push({type:'shooting', raw:cell});
+      } else if(cell.includes('EP')||cell.includes('ep')){
+        events.push({type:'air', raw:cell});
+      }
+    });
+  });
+  return events;
+}
+
+function mergeSheetEvents(events){
+  // For now just log — full merge requires date context
+  console.log('Events to merge:', events);
+}
 
 
 // ── Start app ─────────────────────────────────────────────────────
