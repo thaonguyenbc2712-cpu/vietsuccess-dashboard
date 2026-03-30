@@ -348,7 +348,7 @@ const TODAY_D=new Date();TODAY_D.setHours(0,0,0,0);
 const _pad=n=>n.toString().padStart(2,'0');
 const TODAY=TODAY_D.getFullYear()+'-'+_pad(TODAY_D.getMonth()+1)+'-'+_pad(TODAY_D.getDate());
 
-let projects=[], db=null;
+let projects=[], db=null, isSaving=false;
 let tMs=[], tFlags=[], tTasks=[], tEps=[];
 
 // helpers
@@ -364,10 +364,16 @@ async function init(){
     firebase.initializeApp(FB_CFG);
     db=firebase.firestore();
     db.collection(COL).onSnapshot(snap=>{
-      projects=snap.docs.map(d=>({id:d.id,...d.data()}));
-      if(!projects.length){projects=defaults();bulkSave();}
-      else renderAll();
-      showSync('Sync ✓');
+      if(isSaving) return; // ignore snapshot during save to avoid overwrite
+      const data=snap.docs.map(d=>({id:d.id,...d.data()}));
+      if(!data.length){
+        if(!projects.length){projects=defaults();bulkSave();}
+        // else: keep current projects, don't reset
+      } else {
+        projects=data;
+        renderAll();
+        showSync('Sync ✓');
+      }
     },e=>showSync('⚠ '+e.message));
   }catch(e){
     try{const r=localStorage.getItem('vs_v5');if(r)projects=JSON.parse(r);}catch(e2){}
@@ -377,26 +383,27 @@ async function init(){
 }
 async function bulkSave(){
   if(db){
+    isSaving=true;
     try{
       // Delete removed docs
       const ex=await db.collection(COL).get();
       const cur=projects.map(p=>p.id);
       const delPs=ex.docs.filter(d=>!cur.includes(d.id)).map(d=>d.ref.delete());
       await Promise.all(delPs);
-      // Save each project individually (more reliable than batch for large nested data)
+      // Save each project individually
       await Promise.all(projects.map(p=>{
         const{id,...data}=p;
-        // Deep clone via JSON to strip undefined values Firestore can't handle
         const clean=JSON.parse(JSON.stringify(data));
         return db.collection(COL).doc(id).set(clean);
       }));
+      isSaving=false;
       renderAll();
       showSync('Đồng bộ xong ✓');
     }catch(e){
-      // Fallback to localStorage
+      isSaving=false;
       localStorage.setItem('vs_v5',JSON.stringify(projects));
       renderAll();
-      showSync('⚠ Firebase lỗi, đã lưu local: '+e.message);
+      showSync('⚠ Firebase lỗi: '+e.message);
     }
   }else{
     localStorage.setItem('vs_v5',JSON.stringify(projects));
