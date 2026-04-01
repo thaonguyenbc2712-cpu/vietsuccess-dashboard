@@ -699,7 +699,7 @@ function renderChecklist(){
     (p.tasks||[]).filter(t=>!t.done).forEach(t=>all.push(Object.assign({},t,{proj:p.name,pid:p.id,eid:null,isMilestone:false})));
     // Episode tasks + milestones from 3 phases
     (p.episodes||[]).filter(e=>!e.done).forEach(function(e){
-      const epLabel=p.name+' — Tập '+e.ep;
+      const epLabel=p.name+' — Tập '+e.ep+(e.guest&&e.guest!=='TBD'?' ('+e.guest+')':'');
       // Tasks PM
       (e.tasks||[]).filter(t=>!t.done).forEach(t=>all.push(Object.assign({},t,{proj:epLabel,pid:p.id,eid:e.id,isMilestone:false})));
       // Milestones from phases (built dynamically)
@@ -1124,6 +1124,7 @@ function openEpEdit(pid,eid){
   document.getElementById('ep-pid').value=pid;
   document.getElementById('ep-eid').value=eid;
   document.getElementById('ep-modal-ttl').textContent=p.name+' — Tập '+e.ep;
+  document.getElementById('ep-num').value=e.ep||1;
   document.getElementById('ep-guest').value=e.guest||'';
   document.getElementById('ep-type').value=e.type||'organic';
   document.getElementById('ep-shoot-date').value=e.shootDate||'';
@@ -1251,6 +1252,8 @@ async function saveEpEdit(){
   const eid=document.getElementById('ep-eid').value;
   const p=projects.find(x=>x.id===pid);if(!p)return;
   const e=(p.episodes||[]).find(x=>x.id===eid);if(!e)return;
+  const newEpNum=parseInt(document.getElementById('ep-num').value)||e.ep;
+  e.ep=newEpNum;
   e.guest=document.getElementById('ep-guest').value.trim();
   e.type=document.getElementById('ep-type').value;
   e.shootDate=document.getElementById('ep-shoot-date').value;
@@ -1258,22 +1261,20 @@ async function saveEpEdit(){
   e.airDate=document.getElementById('ep-air-date').value;
   e.airTime=document.getElementById('ep-air-time').value;
   e.tasks=JSON.parse(JSON.stringify(epTempTasks));
-  // If user manually edited phases in modal → save those
-  // If phases are empty (user didn't touch them) → rebuild from new dates
-  const hasManualPhases = Object.values(epTempMs).some(function(arr){return arr.length>0;});
-  if(hasManualPhases){
-    e.phases=[
-      {phase:'pre',label:'Pre-Production',items:JSON.parse(JSON.stringify(epTempMs.pre||[]))},
-      {phase:'shoot',label:'Shooting',items:JSON.parse(JSON.stringify(epTempMs.shoot||[]))},
-      {phase:'post',label:'Post Production',items:JSON.parse(JSON.stringify(epTempMs.post||[]))}
-    ];
-  } else {
-    // Rebuild phases from new shoot/air dates
-    e.phases = buildEpPhases(e, p);
-  }
-  // Always clear saved phases so renderEpPhases rebuilds dynamically from dates
-  // This ensures phases always reflect latest shootDate/airDate
-  e.phases = buildEpPhases(e, p);
+  // Rebuild phases from new dates, but PRESERVE existing done statuses
+  const newPhases = buildEpPhases(e, p);
+  // Merge done statuses from epTempMs (what user sees in modal)
+  newPhases.forEach(function(newPh){
+    const manualItems = epTempMs[newPh.phase]||[];
+    newPh.items.forEach(function(newItem){
+      // Find matching item in manual edits by text similarity
+      const manual = manualItems.find(function(m){
+        return (m.text||'').slice(0,30)===(newItem.text||'').slice(0,30);
+      });
+      if(manual) newItem.status = manual.status||'pending';
+    });
+  });
+  e.phases = newPhases;
   await saveOne(p);
   renderAll();
   closeEpModal();
@@ -1479,6 +1480,7 @@ init();
   <div class="modal-body">
     <input type="hidden" id="ep-pid"><input type="hidden" id="ep-eid">
     <div class="frow">
+      <div class="fg" style="max-width:80px"><label class="fl">Số tập</label><input class="fi" type="number" id="ep-num" min="1" style="text-align:center"></div>
       <div class="fg"><label class="fl">Khách mời (Guest)</label><input class="fi" id="ep-guest" placeholder="VD: Nguyễn Hữu Trí" oninput="updateEpPreview()"></div>
       <div class="fg"><label class="fl">Loại tập</label>
         <select class="fs" id="ep-type" onchange="updateEpPreview()">
