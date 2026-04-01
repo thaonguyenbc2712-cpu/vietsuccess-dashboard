@@ -1063,12 +1063,13 @@ function buildEpPhases(e,p){
   if(shoot){
     sh.items.push({date:shoot,text:'Shooting'+(sTime?' '+sTime:''),status:'pending'});
     sh.items.push({date:shoot,text:'Chuẩn bị quà + nước uống cho '+guest,status:'pending'});
-    sh.items.push({date:aD(shoot,1),text:'Gửi ảnh BTS + lịch air cho '+guest,status:'pending'});
+    sh.items.push({date:aD(shoot,1),text:'Chụp/chọn ảnh BTS',status:'pending'});
   } else {
     sh.items.push({date:'',text:'Shooting — chưa có lịch',status:'pending'});
   }
   const post={phase:'post',label:'③ Post Production',items:[]};
   if(air){
+    post.items.push({date:aD(air,-7),text:'Gửi ảnh BTS + thông báo lịch phát sóng cho '+guest,status:'pending'});
     post.items.push({date:aD(air,-6),text:'Content fullshow (Biên tập)',status:'pending'});
     if(isSpon) post.items.push({date:aD(air,-4),text:'Review & feedback',status:'pending',brand:true});
     post.items.push({date:aD(air,-2),text:'Clip social + Social assets',status:'pending'});
